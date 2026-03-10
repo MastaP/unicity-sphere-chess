@@ -49,14 +49,17 @@ export function useWager(client: ConnectClient | null): UseWager {
 
       try {
         const coinId = await resolveUctCoinId();
-        await client.intent(INTENT_ACTIONS.SEND, {
+        console.log('[useWager] deposit: sending', { to: ESCROW_NAMETAG, amount: ENTRY_FEE, coinId, memo: `unichess:${gameId}` });
+        const result = await client.intent(INTENT_ACTIONS.SEND, {
           to: ESCROW_NAMETAG,
-          amount: String(ENTRY_FEE),
+          amount: ENTRY_FEE,
           coinId,
           memo: `unichess:${gameId}`,
         });
+        console.log('[useWager] deposit: success', result);
         return true;
-      } catch {
+      } catch (err) {
+        console.error('[useWager] deposit: failed', err);
         return false;
       }
     },

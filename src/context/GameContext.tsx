@@ -3,12 +3,13 @@ import { Chess } from 'chess.js';
 import { useChessGame } from '../hooks/useChessGame.js';
 import { useGameMessages } from '../hooks/useGameMessages.js';
 import { useWager } from '../hooks/useWager.js';
-import { generateGameId } from '../lib/protocol.js';
+import { generateGameId, buildChallengeUrl } from '../lib/protocol.js';
 import { isGameTerminal } from '../lib/chess-helpers.js';
 import { ACTION } from '../types/protocol.js';
 import type { ParsedMessage, ChallengeColor, GameOverReason } from '../types/protocol.js';
 import type { GameState, GameResult, PlayerColor, IncomingChallenge } from '../types/game.js';
 import type { ConnectClient } from '@unicitylabs/sphere-sdk/connect';
+import { GAME_ID_LENGTH } from '../constants.js';
 
 export interface GameContextValue {
   state: GameState;
@@ -49,7 +50,39 @@ interface GameProviderProps {
 }
 
 export function GameProvider({ connection, children }: GameProviderProps) {
-  const [incomingChallenge, setIncomingChallenge] = useState<IncomingChallenge | null>(null);
+  const [incomingChallenge, setIncomingChallenge] = useState<IncomingChallenge | null>(() => {
+    // Parse challenge from URL query params on initial load
+    const params = new URLSearchParams(window.location.search);
+    const gameId = params.get('game');
+    const action = params.get('action');
+    const color = params.get('color');
+    const timeStr = params.get('time');
+
+    const from = params.get('from');
+    if (action === 'ch' && gameId && gameId.length === GAME_ID_LENGTH && color && timeStr) {
+      const timeMinutes = parseInt(timeStr, 10);
+      if ([3, 5, 10].includes(timeMinutes)) {
+        const colorMap: Record<string, PlayerColor> = {
+          w: 'black',  // challenger plays white, so we play black
+          b: 'white',
+          r: 'white',
+        };
+        const myColor = colorMap[color] ?? 'black';
+
+        // Clean up URL params without reload
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
+
+        return {
+          nametag: from ? `@${from}` : '',
+          color: myColor,
+          timeMinutes: timeMinutes as 3 | 5 | 10,
+          gameId,
+        };
+      }
+    }
+    return null;
+  });
 
   const wager = useWager(connection.client);
 
@@ -232,7 +265,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
 
     async startChallenge(opponent, color, timeMinutes) {
       const gameId = generateGameId();
-      const opponentPubkey = ''; // Will be resolved by messaging layer
+      const opponentPubkey = '';
 
       game.initChallenge({
         gameId,
@@ -242,16 +275,21 @@ export function GameProvider({ connection, children }: GameProviderProps) {
         opponentPubkey,
       });
 
+      console.log('[GameContext] startChallenge: depositing...');
       const depositOk = await wager.deposit(gameId);
+      console.log('[GameContext] startChallenge: deposit result =', depositOk);
       if (!depositOk) {
         game.reset();
         throw new Error('Deposit failed');
       }
       game.markDepositDone('me');
+      game.setStatus('challenging');
 
       const challengeColor: ChallengeColor =
         color === 'white' ? 'w' : 'b';
-      const gameUrl = `${window.location.origin}${window.location.pathname}?game=${gameId}`;
+      const baseUrl = `${window.location.origin}${window.location.pathname}`;
+      const myNametag = connection.identity?.nametag ?? '';
+      const gameUrl = buildChallengeUrl(baseUrl, gameId, challengeColor, timeMinutes, myNametag);
 
       const msg: ParsedMessage = {
         action: ACTION.CHALLENGE,
@@ -260,7 +298,9 @@ export function GameProvider({ connection, children }: GameProviderProps) {
         timeMinutes,
         gameUrl,
       };
+      console.log('[GameContext] startChallenge: sending challenge DM...');
       await messaging.sendMessage(opponent, msg);
+      console.log('[GameContext] startChallenge: challenge sent, awaiting accept');
       game.setStatus('awaiting-accept');
     },
 

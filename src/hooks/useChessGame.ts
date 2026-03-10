@@ -184,7 +184,7 @@ export function useChessGame(
         const myTurn = isMyTurn();
 
         if (myTurn) {
-          const newClock = Math.max(0, s.myClockMs - delta);
+          const newClock = Math.round(Math.max(0, s.myClockMs - delta));
           dispatch({ type: 'SET_CLOCK', who: 'me', clockMs: newClock });
 
           if (newClock <= 0) {
@@ -204,7 +204,7 @@ export function useChessGame(
             return;
           }
         } else {
-          const newClock = Math.max(0, s.opponentClockMs - delta);
+          const newClock = Math.round(Math.max(0, s.opponentClockMs - delta));
           dispatch({ type: 'SET_CLOCK', who: 'opponent', clockMs: newClock });
 
           if (newClock <= 0) {
@@ -263,7 +263,7 @@ export function useChessGame(
         const msg: ParsedMessage = {
           action: ACTION.HEARTBEAT,
           gameId: s.gameId,
-          clockMs: s.myClockMs,
+          clockMs: Math.round(s.myClockMs),
         };
         heartbeatCallbackRef.current(msg);
       }
@@ -311,7 +311,7 @@ export function useChessGame(
       const moveResult = testChess.move(san);
       if (!moveResult) return null;
 
-      const clockMs = s.myClockMs;
+      const clockMs = Math.round(s.myClockMs);
       dispatch({ type: 'APPLY_MOVE', san, clockMs, isMyMove: true });
 
       const msg: ParsedMessage = {

@@ -16,7 +16,8 @@ export function encodeMessage(msg: ParsedMessage): string {
 
   switch (msg.action) {
     case ACTION.CHALLENGE:
-      return `${prefix}:${ACTION.CHALLENGE}:${msg.color}:${msg.timeMinutes}:${msg.gameUrl}`;
+      // Challenge is sent as a clickable URL with protocol fields as query params
+      return msg.gameUrl;
     case ACTION.ACCEPT:
       return `${prefix}:${ACTION.ACCEPT}`;
     case ACTION.DECLINE:
@@ -54,7 +55,18 @@ const VALID_GAMEOVER_REASONS = new Set<string>([
   'disconnect',
 ]);
 
+/**
+ * Parse a raw DM message into a ParsedMessage.
+ * Handles two formats:
+ * - Challenge: a URL with query params (?game=...&action=ch&color=...&time=...)
+ * - All others: uc1:<gameId>:<action>:<params...>
+ */
 export function parseMessage(raw: string): ParsedMessage | null {
+  // Try parsing as a challenge URL first
+  const challengeFromUrl = parseChallengeUrl(raw.trim());
+  if (challengeFromUrl) return challengeFromUrl;
+
+  // Standard uc1: protocol messages
   if (!raw.startsWith(`${PROTOCOL_PREFIX}:`)) return null;
 
   const parts = raw.split(':');
@@ -67,23 +79,6 @@ export function parseMessage(raw: string): ParsedMessage | null {
   if (!action) return null;
 
   switch (action) {
-    case ACTION.CHALLENGE: {
-      if (parts.length < 6) return null;
-      const color = parts[3];
-      const timeStr = parts[4];
-      if (!color || !timeStr || !VALID_CHALLENGE_COLORS.has(color)) return null;
-      const timeMinutes = parseInt(timeStr, 10);
-      if (isNaN(timeMinutes)) return null;
-      const gameUrl = parts.slice(5).join(':');
-      return {
-        action: ACTION.CHALLENGE,
-        gameId,
-        color: color as ChallengeColor,
-        timeMinutes,
-        gameUrl,
-      };
-    }
-
     case ACTION.ACCEPT:
       return { action: ACTION.ACCEPT, gameId };
 
@@ -142,4 +137,51 @@ export function parseMessage(raw: string): ParsedMessage | null {
     default:
       return null;
   }
+}
+
+function parseChallengeUrl(raw: string): ParsedMessage | null {
+  try {
+    if (!raw.startsWith('http://') && !raw.startsWith('https://')) return null;
+    const url = new URL(raw);
+    const gameId = url.searchParams.get('game');
+    const action = url.searchParams.get('action');
+    const color = url.searchParams.get('color');
+    const timeStr = url.searchParams.get('time');
+
+    if (action !== 'ch') return null;
+    if (!gameId || gameId.length !== GAME_ID_LENGTH) return null;
+    if (!color || !VALID_CHALLENGE_COLORS.has(color)) return null;
+    if (!timeStr) return null;
+    const timeMinutes = parseInt(timeStr, 10);
+    if (isNaN(timeMinutes)) return null;
+
+    return {
+      action: ACTION.CHALLENGE,
+      gameId,
+      color: color as ChallengeColor,
+      timeMinutes,
+      gameUrl: raw,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Build a challenge URL with game params as query parameters.
+ */
+export function buildChallengeUrl(
+  baseUrl: string,
+  gameId: string,
+  color: ChallengeColor,
+  timeMinutes: number,
+  challengerNametag: string,
+): string {
+  const url = new URL(baseUrl);
+  url.searchParams.set('game', gameId);
+  url.searchParams.set('action', 'ch');
+  url.searchParams.set('color', color);
+  url.searchParams.set('time', String(timeMinutes));
+  url.searchParams.set('from', challengerNametag.replace(/^@/, ''));
+  return url.toString();
 }
