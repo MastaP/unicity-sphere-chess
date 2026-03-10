@@ -81,24 +81,24 @@ export function GameOverOverlay({
   }
 
   return (
-    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm rounded flex flex-col items-center justify-center z-10 p-4">
+    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center z-10 p-4">
       {/* Result */}
       <h2
         className={`text-3xl font-bold mb-1 ${
-          iWon ? 'text-green-400' : isDraw ? 'text-amber-300' : 'text-red-400'
+          iWon ? 'text-green-400' : isDraw ? 'text-orange-300' : 'text-red-400'
         }`}
       >
         {getResultText(result, myColor)}
       </h2>
 
-      <p className="text-slate-400 text-sm mb-2">
+      <p className="text-neutral-400 text-sm mb-2">
         {getReasonText(result)}
       </p>
 
       {/* Payout */}
       <p
         className={`text-lg font-semibold mb-6 ${
-          iWon ? 'text-green-300' : isDraw ? 'text-slate-300' : 'text-red-300'
+          iWon ? 'text-green-300' : isDraw ? 'text-neutral-300' : 'text-red-300'
         }`}
       >
         {getPayoutText(result, myColor)}
@@ -108,22 +108,22 @@ export function GameOverOverlay({
       <div className="flex flex-col gap-2 w-full max-w-48">
         <button
           onClick={onRematch}
-          className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold
-                     rounded-lg cursor-pointer transition-colors text-sm"
+          className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold
+                     rounded-xl cursor-pointer transition-colors text-sm"
         >
           Rematch
         </button>
         <button
           onClick={copyPgn}
-          className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300
-                     rounded-lg cursor-pointer transition-colors text-sm"
+          className="px-4 py-2 bg-white/10 hover:bg-white/15 text-neutral-300
+                     rounded-xl cursor-pointer transition-colors text-sm"
         >
           {copied ? 'Copied!' : 'Copy PGN'}
         </button>
         <button
           onClick={onNewGame}
-          className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300
-                     rounded-lg cursor-pointer transition-colors text-sm"
+          className="px-4 py-2 bg-white/10 hover:bg-white/15 text-neutral-300
+                     rounded-xl cursor-pointer transition-colors text-sm"
         >
           New Game
         </button>

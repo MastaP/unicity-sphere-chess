@@ -90,7 +90,7 @@ export function CapturedPieces({ chess, color }: CapturedPiecesProps) {
         {captured.join('')}
       </span>
       {advantage > 0 && (
-        <span className="text-slate-400 text-xs ml-1">+{advantage}</span>
+        <span className="text-neutral-500 text-xs ml-1">+{advantage}</span>
       )}
     </div>
   );

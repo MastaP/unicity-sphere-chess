@@ -17,8 +17,8 @@ export function MoveHistory({ moves }: MoveHistoryProps) {
 
   if (moves.length === 0) {
     return (
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 h-48">
-        <p className="text-slate-500 text-sm text-center mt-8">
+      <div className="bg-neutral-900 border border-white/10 rounded-2xl p-3 h-48">
+        <p className="text-neutral-500 text-sm text-center mt-8">
           No moves yet
         </p>
       </div>
@@ -40,11 +40,11 @@ export function MoveHistory({ moves }: MoveHistoryProps) {
   return (
     <div
       ref={scrollRef}
-      className="bg-slate-800 border border-slate-700 rounded-lg p-2 h-48 overflow-y-auto"
+      className="bg-neutral-900 border border-white/10 rounded-2xl p-2 h-48 overflow-y-auto"
     >
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-slate-500 text-xs">
+          <tr className="text-neutral-500 text-xs">
             <th className="w-8 text-left font-normal">#</th>
             <th className="text-left font-normal">White</th>
             <th className="text-left font-normal">Black</th>
@@ -52,10 +52,10 @@ export function MoveHistory({ moves }: MoveHistoryProps) {
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.num} className="hover:bg-slate-700/50">
-              <td className="text-slate-600 py-0.5">{row.num}.</td>
-              <td className="text-slate-200 py-0.5 font-mono">{row.white}</td>
-              <td className="text-slate-200 py-0.5 font-mono">
+            <tr key={row.num} className="hover:bg-white/5 rounded">
+              <td className="text-neutral-600 py-0.5">{row.num}.</td>
+              <td className="text-neutral-200 py-0.5 font-mono">{row.white}</td>
+              <td className="text-neutral-200 py-0.5 font-mono">
                 {row.black ?? ''}
               </td>
             </tr>

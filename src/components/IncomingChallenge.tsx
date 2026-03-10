@@ -27,26 +27,26 @@ export function IncomingChallenge({ challenge, onAccept, onDecline }: IncomingCh
   }
 
   return (
-    <div className="bg-amber-900/20 border border-amber-700/50 rounded-xl p-5 w-full max-w-sm animate-[pulse_2s_ease-in-out_1]">
-      <h3 className="text-amber-300 font-semibold mb-3">Incoming Challenge</h3>
+    <div className="bg-orange-900/15 border border-orange-500/30 rounded-2xl p-5 w-full max-w-sm animate-[pulse_2s_ease-in-out_1]">
+      <h3 className="text-orange-300 font-semibold mb-3">Incoming Challenge</h3>
 
-      <div className="space-y-1 text-sm text-slate-300 mb-4">
+      <div className="space-y-1 text-sm text-neutral-300 mb-4">
         <p>
-          <span className="text-slate-500">From:</span>{' '}
-          <span className="font-medium text-slate-100">{challenge.nametag}</span>
+          <span className="text-neutral-500">From:</span>{' '}
+          <span className="font-medium text-white">{challenge.nametag}</span>
         </p>
         <p>
-          <span className="text-slate-500">You play:</span>{' '}
+          <span className="text-neutral-500">You play:</span>{' '}
           {myColor === 'white' ? '\u2654 White' : '\u265A Black'}
         </p>
         <p>
-          <span className="text-slate-500">Time:</span>{' '}
+          <span className="text-neutral-500">Time:</span>{' '}
           {challenge.timeMinutes} minutes
         </p>
       </div>
 
       {error && (
-        <div className="bg-red-900/40 border border-red-700 text-red-300 px-3 py-2 rounded-lg text-sm mb-3">
+        <div className="bg-red-900/30 border border-red-700/50 text-red-400 px-3 py-2 rounded-xl text-sm mb-3">
           {error}
         </div>
       )}
@@ -55,8 +55,8 @@ export function IncomingChallenge({ challenge, onAccept, onDecline }: IncomingCh
         <button
           onClick={handleAccept}
           disabled={isDepositing}
-          className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-green-600/50
-                     text-white font-semibold rounded-lg cursor-pointer disabled:cursor-not-allowed
+          className="flex-1 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-500/50
+                     text-white font-semibold rounded-xl cursor-pointer disabled:cursor-not-allowed
                      transition-colors text-sm"
         >
           {isDepositing ? 'Depositing...' : `Accept (${ENTRY_FEE} UCT)`}
@@ -64,8 +64,8 @@ export function IncomingChallenge({ challenge, onAccept, onDecline }: IncomingCh
         <button
           onClick={onDecline}
           disabled={isDepositing}
-          className="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-700/50
-                     text-slate-300 font-medium rounded-lg cursor-pointer disabled:cursor-not-allowed
+          className="flex-1 py-2.5 bg-white/10 hover:bg-white/15 disabled:bg-white/5
+                     text-neutral-300 font-medium rounded-xl cursor-pointer disabled:cursor-not-allowed
                      transition-colors text-sm"
         >
           Decline

@@ -71,23 +71,23 @@ export function ChallengeDialog({ onChallenge, status, opponent, onCancel }: Cha
     const countdownStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
     return (
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-sm text-center">
+      <div className="bg-neutral-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm text-center">
         <div className="animate-pulse mb-4">
-          <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto" />
         </div>
 
         {status === 'depositing' && (
-          <p className="text-slate-300">Depositing {ENTRY_FEE} UCT...</p>
+          <p className="text-neutral-300">Depositing {ENTRY_FEE} UCT...</p>
         )}
         {status === 'challenging' && (
-          <p className="text-slate-300">Sending challenge...</p>
+          <p className="text-neutral-300">Sending challenge...</p>
         )}
         {status === 'awaiting-accept' && (
           <>
-            <p className="text-slate-300">
+            <p className="text-neutral-300">
               Waiting for {opponent ?? 'opponent'}...
             </p>
-            <p className="text-slate-500 text-sm mt-1">
+            <p className="text-neutral-500 text-sm mt-1">
               Expires in {countdownStr}
             </p>
           </>
@@ -95,7 +95,7 @@ export function ChallengeDialog({ onChallenge, status, opponent, onCancel }: Cha
 
         <button
           onClick={onCancel}
-          className="mt-4 px-4 py-2 text-slate-400 hover:text-slate-200 text-sm cursor-pointer transition-colors"
+          className="mt-4 px-4 py-2 text-neutral-500 hover:text-neutral-300 text-sm cursor-pointer transition-colors"
         >
           Cancel
         </button>
@@ -106,22 +106,22 @@ export function ChallengeDialog({ onChallenge, status, opponent, onCancel }: Cha
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-sm"
+      className="bg-neutral-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm"
     >
-      <h2 className="text-lg font-semibold text-slate-100 mb-4">New Game</h2>
+      <h2 className="text-lg font-semibold text-white mb-4">New Game</h2>
 
       {/* Opponent nametag */}
       <label className="block mb-4">
-        <span className="text-slate-400 text-sm">Opponent</span>
+        <span className="text-neutral-400 text-sm">Opponent</span>
         <div className="relative mt-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">@</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">@</span>
           <input
             type="text"
             value={nametag.replace(/^@/, '')}
             onChange={(e) => setNametag(e.target.value)}
             placeholder="nametag"
-            className="w-full bg-slate-900 border border-slate-600 rounded-lg pl-8 pr-3 py-2
-                       text-slate-100 placeholder-slate-600 focus:outline-none focus:border-amber-500
+            className="w-full bg-neutral-800 border border-neutral-700 rounded-xl pl-8 pr-3 py-2.5
+                       text-white placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500
                        transition-colors"
           />
         </div>
@@ -129,20 +129,20 @@ export function ChallengeDialog({ onChallenge, status, opponent, onCancel }: Cha
 
       {/* Color selection */}
       <fieldset className="mb-4">
-        <legend className="text-slate-400 text-sm mb-2">Play as</legend>
+        <legend className="text-neutral-400 text-sm mb-2">Play as</legend>
         <div className="flex gap-2">
           {(['white', 'black'] as const).map((c) => (
             <button
               key={c}
               type="button"
               onClick={() => setColor(c)}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors
+              className={`flex-1 py-2 rounded-xl text-sm font-medium cursor-pointer transition-colors
                 ${
                   color === c
                     ? c === 'white'
-                      ? 'bg-slate-100 text-slate-900'
-                      : 'bg-slate-600 text-slate-100 ring-2 ring-amber-500'
-                    : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                      ? 'bg-neutral-100 text-neutral-900'
+                      : 'bg-neutral-700 text-white ring-2 ring-orange-500'
+                    : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
                 }`}
             >
               {c === 'white' ? '\u2654 White' : '\u265A Black'}
@@ -153,18 +153,18 @@ export function ChallengeDialog({ onChallenge, status, opponent, onCancel }: Cha
 
       {/* Time control */}
       <fieldset className="mb-5">
-        <legend className="text-slate-400 text-sm mb-2">Time control</legend>
+        <legend className="text-neutral-400 text-sm mb-2">Time control</legend>
         <div className="flex gap-2">
           {TIME_OPTIONS.map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => setTimeMinutes(t)}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors
+              className={`flex-1 py-2 rounded-xl text-sm font-medium cursor-pointer transition-colors
                 ${
                   timeMinutes === t
-                    ? 'bg-amber-500 text-slate-900'
-                    : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
                 }`}
             >
               {t} min
@@ -174,15 +174,15 @@ export function ChallengeDialog({ onChallenge, status, opponent, onCancel }: Cha
       </fieldset>
 
       {error && (
-        <div className="bg-red-900/40 border border-red-700 text-red-300 px-3 py-2 rounded-lg text-sm mb-4">
+        <div className="bg-red-900/30 border border-red-700/50 text-red-400 px-3 py-2 rounded-xl text-sm mb-4">
           {error}
         </div>
       )}
 
       <button
         type="submit"
-        className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold
-                   rounded-xl transition-colors cursor-pointer shadow-lg shadow-amber-500/20"
+        className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold
+                   rounded-xl transition-colors cursor-pointer"
       >
         Challenge ({ENTRY_FEE} UCT)
       </button>

@@ -23,8 +23,8 @@ export function Board({ chess, myColor, onMove, disabled, lastMove }: BoardProps
     const last = history[history.length - 1];
     if (!last) return {};
     return {
-      [last.from]: { background: 'rgba(255, 191, 0, 0.3)' },
-      [last.to]: { background: 'rgba(255, 191, 0, 0.3)' },
+      [last.from]: { background: 'rgba(255, 111, 0, 0.25)' },
+      [last.to]: { background: 'rgba(255, 111, 0, 0.25)' },
     };
   }, [chess, lastMove]);
 
@@ -53,8 +53,8 @@ export function Board({ chess, myColor, onMove, disabled, lastMove }: BoardProps
         boardOrientation={boardOrientation}
         arePiecesDraggable={!disabled}
         customBoardStyle={{
-          borderRadius: '4px',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+          borderRadius: '12px',
+          boxShadow: '0 4px 24px rgba(0, 0, 0, 0.5)',
         }}
         customDarkSquareStyle={{ backgroundColor: '#779952' }}
         customLightSquareStyle={{ backgroundColor: '#edeed1' }}

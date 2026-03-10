@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 html,
@@ -5,6 +6,31 @@ body,
 #root {
   height: 100%;
   margin: 0;
-  background-color: #0f172a;
-  color: #e2e8f0;
+  background: #060606;
+  color: #fefefe;
+  font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Transparent bg when running inside an iframe (Sphere) */
+@media all {
+  html.in-iframe,
+  html.in-iframe body,
+  html.in-iframe #root {
+    background: transparent;
+  }
+}
+
+/* Scrollbar styling to match Sphere */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }

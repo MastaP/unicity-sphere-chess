@@ -42,10 +42,10 @@ export function GameScreen({ connection }: GameScreenProps) {
     state.status === 'awaiting-accept'
   ) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 gap-6">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 gap-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-100">Unicity Chess</h1>
-          <p className="text-slate-400 text-sm mt-1">Playing as {myNametag}</p>
+          <h1 className="text-2xl font-bold text-white">Unicity Chess</h1>
+          <p className="text-neutral-400 text-sm mt-1">Playing as {myNametag}</p>
         </div>
 
         {incomingChallenge && (
@@ -65,7 +65,7 @@ export function GameScreen({ connection }: GameScreenProps) {
 
         <button
           onClick={connection.disconnect}
-          className="text-slate-500 hover:text-slate-300 text-sm transition-colors cursor-pointer"
+          className="text-neutral-500 hover:text-neutral-300 text-sm transition-colors cursor-pointer"
         >
           Disconnect
         </button>
@@ -108,7 +108,7 @@ export function GameScreen({ connection }: GameScreenProps) {
   const bottomLabel = bottomColor === state.myColor ? myNametag : opponentNametag;
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center p-2 sm:p-4">
+    <div className="min-h-screen flex flex-col items-center p-2 sm:p-4">
       <GameStatus
         isMyTurn={isMyTurn}
         isCheck={state.chess.isCheck()}
@@ -126,7 +126,7 @@ export function GameScreen({ connection }: GameScreenProps) {
           <div className="flex items-center justify-between w-full max-w-[min(90vw,500px)] px-1">
             <div className="flex items-center gap-2">
               <CapturedPieces chess={state.chess} color={topColor} />
-              <span className="text-slate-400 text-sm truncate max-w-32">
+              <span className="text-neutral-400 text-sm truncate max-w-32">
                 {topLabel}
               </span>
             </div>
@@ -171,7 +171,7 @@ export function GameScreen({ connection }: GameScreenProps) {
           <div className="flex items-center justify-between w-full max-w-[min(90vw,500px)] px-1">
             <div className="flex items-center gap-2">
               <CapturedPieces chess={state.chess} color={bottomColor} />
-              <span className="text-slate-300 text-sm font-medium truncate max-w-32">
+              <span className="text-neutral-300 text-sm font-medium truncate max-w-32">
                 {bottomLabel}
               </span>
             </div>
@@ -185,20 +185,20 @@ export function GameScreen({ connection }: GameScreenProps) {
 
           {/* Draw offer banner */}
           {state.drawOfferedBy === 'opponent' && !isGameOver && (
-            <div className="bg-amber-900/30 border border-amber-700/50 rounded-lg p-3">
-              <p className="text-amber-300 text-sm mb-2">
+            <div className="bg-orange-900/15 border border-orange-500/30 rounded-2xl p-3">
+              <p className="text-orange-300 text-sm mb-2">
                 {opponentNametag} offers a draw
               </p>
               <div className="flex gap-2">
                 <button
                   onClick={acceptDraw}
-                  className="flex-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg cursor-pointer transition-colors"
+                  className="flex-1 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm rounded-xl cursor-pointer transition-colors"
                 >
                   Accept
                 </button>
                 <button
                   onClick={declineDraw}
-                  className="flex-1 px-3 py-1.5 bg-slate-600 hover:bg-slate-500 text-white text-sm rounded-lg cursor-pointer transition-colors"
+                  className="flex-1 px-3 py-1.5 bg-white/10 hover:bg-white/15 text-neutral-300 text-sm rounded-xl cursor-pointer transition-colors"
                 >
                   Decline
                 </button>
@@ -212,15 +212,15 @@ export function GameScreen({ connection }: GameScreenProps) {
               {canClaimDisconnect && (
                 <button
                   onClick={claimDisconnectWin}
-                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm rounded-lg cursor-pointer transition-colors font-medium"
+                  className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm rounded-xl cursor-pointer transition-colors font-medium"
                 >
-                  Claim win -- opponent disconnected
+                  Claim win — opponent disconnected
                 </button>
               )}
               {canAbort && (
                 <button
                   onClick={abort}
-                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm rounded-lg cursor-pointer transition-colors"
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/15 text-neutral-300 text-sm rounded-xl cursor-pointer transition-colors"
                 >
                   Abort
                 </button>
@@ -229,20 +229,20 @@ export function GameScreen({ connection }: GameScreenProps) {
                 <>
                   <button
                     onClick={resign}
-                    className="px-3 py-1.5 bg-red-800/60 hover:bg-red-700/60 text-red-300 text-sm rounded-lg cursor-pointer transition-colors"
+                    className="px-3 py-1.5 bg-red-900/40 hover:bg-red-900/60 text-red-400 text-sm rounded-xl cursor-pointer transition-colors"
                   >
                     Resign
                   </button>
                   {state.drawOfferedBy !== 'me' && (
                     <button
                       onClick={offerDraw}
-                      className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm rounded-lg cursor-pointer transition-colors"
+                      className="px-3 py-1.5 bg-white/10 hover:bg-white/15 text-neutral-300 text-sm rounded-xl cursor-pointer transition-colors"
                     >
                       Offer Draw
                     </button>
                   )}
                   {state.drawOfferedBy === 'me' && (
-                    <span className="px-3 py-1.5 text-slate-500 text-sm">
+                    <span className="px-3 py-1.5 text-neutral-500 text-sm">
                       Draw offered...
                     </span>
                   )}

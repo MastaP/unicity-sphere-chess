@@ -37,7 +37,7 @@ function formatResult(result: GameResult): string {
 
   const outcomeStr = outcomes[result.outcome] ?? result.outcome;
   const reasonStr = reasons[result.reason] ?? result.reason;
-  return reasonStr ? `${outcomeStr} -- ${reasonStr}` : outcomeStr;
+  return reasonStr ? `${outcomeStr} — ${reasonStr}` : outcomeStr;
 }
 
 export function GameStatus({
@@ -62,17 +62,17 @@ export function GameStatus({
   const isStale = heartbeatAge >= HEARTBEAT_STALE_MS && heartbeatAge < HEARTBEAT_WARN_MS;
 
   let statusText: string;
-  let statusColor = 'text-slate-300';
+  let statusColor = 'text-neutral-300';
 
   if (isGameOver && result) {
     statusText = formatResult(result);
-    statusColor = 'text-amber-300';
+    statusColor = 'text-orange-300';
   } else if (isCheck) {
     statusText = isMyTurn ? 'Check! Your move' : 'Check!';
     statusColor = 'text-red-400';
   } else if (drawOfferedBy === 'opponent') {
     statusText = `${opponentNametag} offers a draw`;
-    statusColor = 'text-amber-300';
+    statusColor = 'text-orange-300';
   } else if (isMyTurn) {
     statusText = 'Your turn';
     statusColor = 'text-green-400';
@@ -81,7 +81,7 @@ export function GameStatus({
   }
 
   return (
-    <div className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 w-full max-w-4xl">
+    <div className="flex items-center gap-3 bg-neutral-900 border border-white/10 rounded-2xl px-4 py-2 w-full max-w-4xl">
       {/* Connection indicator */}
       {!isGameOver && (
         <div className="flex items-center gap-1.5 shrink-0" title={
@@ -106,7 +106,7 @@ export function GameStatus({
 
       {/* Opponent nametag */}
       {!isGameOver && (
-        <span className="text-slate-500 text-xs shrink-0">
+        <span className="text-neutral-500 text-xs shrink-0">
           vs {opponentNametag}
         </span>
       )}

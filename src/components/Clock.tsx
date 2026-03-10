@@ -51,15 +51,15 @@ export function Clock({ timeMs, active }: ClockProps) {
   return (
     <div
       className={`
-        font-mono text-lg px-3 py-1 rounded-lg min-w-20 text-center tabular-nums
+        font-mono text-lg px-3 py-1 rounded-xl min-w-20 text-center tabular-nums
         transition-colors
         ${active
           ? isCritical
             ? 'bg-red-600 text-white animate-pulse'
             : isLow
-              ? 'bg-amber-600 text-white animate-pulse'
-              : 'bg-slate-100 text-slate-900'
-          : 'bg-slate-700 text-slate-400'
+              ? 'bg-orange-600 text-white animate-pulse'
+              : 'bg-white/10 text-white'
+          : 'bg-white/5 text-neutral-500'
         }
       `}
     >

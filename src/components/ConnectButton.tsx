@@ -31,10 +31,9 @@ export function ConnectButton({ isConnecting, onConnect, error }: ConnectButtonP
       <button
         onClick={onConnect}
         disabled={isConnecting}
-        className="px-8 py-3 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-500/50
-                   text-slate-900 font-semibold rounded-xl text-lg
-                   transition-colors cursor-pointer disabled:cursor-not-allowed
-                   shadow-lg shadow-amber-500/20"
+        className="px-8 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-500/50
+                   text-white font-semibold rounded-xl text-lg
+                   transition-colors cursor-pointer disabled:cursor-not-allowed"
       >
         {isConnecting ? (
           <span className="flex items-center gap-2">
@@ -47,7 +46,7 @@ export function ConnectButton({ isConnecting, onConnect, error }: ConnectButtonP
       </button>
 
       {error && (
-        <div className="bg-red-900/40 border border-red-700 text-red-300 px-4 py-2 rounded-lg max-w-sm text-center text-sm">
+        <div className="bg-red-900/30 border border-red-700/50 text-red-400 px-4 py-2 rounded-xl max-w-sm text-center text-sm">
           {error}
         </div>
       )}

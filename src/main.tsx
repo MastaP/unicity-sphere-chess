@@ -3,6 +3,11 @@ import { createRoot } from 'react-dom/client';
 import App from './App.js';
 import './App.css';
 
+// Transparent background when inside an iframe (Sphere)
+if (window.self !== window.top) {
+  document.documentElement.classList.add('in-iframe');
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
