@@ -176,7 +176,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
   const payoutTriggeredRef = useRef<string | null>(null);
 
   const triggerPayout = useCallback(
-    (result: GameResult, myColor: PlayerColor, opponentNametag: string) => {
+    (result: GameResult, myColor: PlayerColor) => {
       const myNametag = connection.identity?.nametag;
       if (!myNametag) return;
 
@@ -186,17 +186,19 @@ export function GameProvider({ connection, children }: GameProviderProps) {
       if (payoutTriggeredRef.current === gameId) return;
       payoutTriggeredRef.current = gameId;
 
-      if (result.outcome === 'aborted') {
+      // Each client only requests payout for itself.
+      // The opponent's client handles their own payout.
+      if (result.outcome === 'aborted' || result.outcome === 'draw') {
+        // Refund own deposit
         wager.requestPayout(myNametag, 10);
-        wager.requestPayout(opponentNametag, 10);
-      } else if (result.outcome === 'draw') {
-        wager.requestPayout(myNametag, 10);
-        wager.requestPayout(opponentNametag, 10);
       } else {
         const iWon =
           (result.outcome === 'white-wins' && myColor === 'white') ||
           (result.outcome === 'black-wins' && myColor === 'black');
-        wager.requestPayout(iWon ? myNametag : opponentNametag, 20);
+        if (iWon) {
+          wager.requestPayout(myNametag, 20);
+        }
+        // Loser gets nothing — no payout needed
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -207,13 +209,10 @@ export function GameProvider({ connection, children }: GameProviderProps) {
   const prevStatusRef = useRef(game.state.status);
   useEffect(() => {
     if (prevStatusRef.current !== 'ended' && game.state.status === 'ended' && game.state.result) {
-      const opponent = game.state.opponent;
-      if (opponent) {
-        triggerPayout(game.state.result, game.state.myColor, opponent.nametag);
-      }
+      triggerPayout(game.state.result, game.state.myColor);
     }
     prevStatusRef.current = game.state.status;
-  }, [game.state.status, game.state.result, game.state.opponent, game.state.myColor, triggerPayout]);
+  }, [game.state.status, game.state.result, game.state.myColor, triggerPayout]);
 
   const value: GameContextValue = {
     state: game.state,
