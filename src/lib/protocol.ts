@@ -141,8 +141,10 @@ export function parseMessage(raw: string): ParsedMessage | null {
 
 function parseChallengeUrl(raw: string): ParsedMessage | null {
   try {
-    if (!raw.startsWith('http://') && !raw.startsWith('https://')) return null;
-    const url = new URL(raw);
+    if (!raw.startsWith('http://') && !raw.startsWith('https://') && !raw.startsWith('unicity-connect://')) return null;
+    // Convert unicity-connect:// to https:// for URL parsing
+    const normalizedRaw = raw.replace(/^unicity-connect:\/\//, 'https://');
+    const url = new URL(normalizedRaw);
     const gameId = url.searchParams.get('game');
     const action = url.searchParams.get('action');
     const color = url.searchParams.get('color');
@@ -169,6 +171,8 @@ function parseChallengeUrl(raw: string): ParsedMessage | null {
 
 /**
  * Build a challenge URL with game params as query parameters.
+ * Uses unicity-connect:// protocol for deep link support in Sphere DMs.
+ * Sphere converts this back to http(s) when opening.
  */
 export function buildChallengeUrl(
   baseUrl: string,
@@ -183,5 +187,6 @@ export function buildChallengeUrl(
   url.searchParams.set('color', color);
   url.searchParams.set('time', String(timeMinutes));
   url.searchParams.set('from', challengerNametag.replace(/^@/, ''));
-  return url.toString();
+  // Replace http(s):// with unicity-connect:// for Sphere deep link handling
+  return url.toString().replace(/^https?:\/\//, 'unicity-connect://');
 }
