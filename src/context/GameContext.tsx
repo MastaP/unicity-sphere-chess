@@ -49,6 +49,9 @@ interface GameProviderProps {
   children: ReactNode;
 }
 
+// Module-level dedup set — survives React StrictMode remounts
+const paidOutGameIds = new Set<string>();
+
 export function GameProvider({ connection, children }: GameProviderProps) {
   const [incomingChallenge, setIncomingChallenge] = useState<IncomingChallenge | null>(() => {
     // Parse challenge from URL query params on initial load
@@ -172,19 +175,16 @@ export function GameProvider({ connection, children }: GameProviderProps) {
   );
   messagingRef.current = messaging;
 
-  // Track whether we've already triggered payout for this game to avoid double-paying
-  const payoutTriggeredRef = useRef<string | null>(null);
-
   const triggerPayout = useCallback(
     (result: GameResult, myColor: PlayerColor) => {
       const myNametag = connection.identity?.nametag;
       if (!myNametag) return;
 
-      // Prevent duplicate payouts for the same game
+      // Prevent duplicate payouts for the same game (module-level set survives StrictMode remounts)
       const g = gameRef.current;
       const gameId = g?.state.gameId ?? '';
-      if (payoutTriggeredRef.current === gameId) return;
-      payoutTriggeredRef.current = gameId;
+      if (paidOutGameIds.has(gameId)) return;
+      paidOutGameIds.add(gameId);
 
       // Each client only requests payout for itself.
       // The opponent's client handles their own payout.
@@ -354,7 +354,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
 
     offerDraw() {
       const msg = game.offerDraw();
-      if (game.state.opponent) {
+      if (msg && game.state.opponent) {
         messaging.sendMessage(game.state.opponent.nametag, msg);
       }
     },

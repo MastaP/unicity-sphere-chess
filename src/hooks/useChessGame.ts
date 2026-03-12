@@ -139,7 +139,7 @@ export interface UseChessGame {
   makeMove: (san: string) => ParsedMessage | null;
   handleIncomingMessage: (msg: ParsedMessage) => void;
   resign: () => ParsedMessage;
-  offerDraw: () => ParsedMessage;
+  offerDraw: () => ParsedMessage | null;
   acceptDraw: () => ParsedMessage;
   declineDraw: () => ParsedMessage;
   abort: () => ParsedMessage;
@@ -415,7 +415,8 @@ export function useChessGame(
     return { action: ACTION.RESIGN, gameId: s.gameId };
   }, []);
 
-  const offerDraw = useCallback((): ParsedMessage => {
+  const offerDraw = useCallback((): ParsedMessage | null => {
+    if (stateRef.current.drawOfferedBy === 'me') return null;
     dispatch({ type: 'DRAW_OFFERED', by: 'me' });
     return { action: ACTION.DRAW_OFFER, gameId: stateRef.current.gameId };
   }, []);
