@@ -34,6 +34,16 @@ export function GameScreen({ connection }: GameScreenProps) {
   const myNametag = connection.identity?.nametag ?? 'You';
   const opponentNametag = state.opponent?.nametag ?? 'Opponent';
 
+  const isGameOver = state.status === 'ended';
+
+  // Disconnect detection: must be called unconditionally (Rules of Hooks)
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (isGameOver || state.status !== 'playing') return;
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [isGameOver, state.status]);
+
   // Lobby / idle state
   if (
     state.status === 'idle' ||
@@ -75,16 +85,8 @@ export function GameScreen({ connection }: GameScreenProps) {
 
   // Active game
   const isMyTurn = (state.chess.turn() === 'w') === (state.myColor === 'white');
-  const isGameOver = state.status === 'ended';
   const canAbort = state.moveHistory.length < 2 && !isGameOver;
 
-  // Disconnect detection: full game duration since last heartbeat/move
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    if (isGameOver) return;
-    const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, [isGameOver]);
   const disconnectTimeoutMs = state.timeControlMinutes * 60 * 1000;
   const canClaimDisconnect =
     !isGameOver &&

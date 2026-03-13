@@ -9,8 +9,8 @@ let offsetMs = 0;
 let synced = false;
 
 const TIME_ENDPOINTS = [
-  'https://worldtimeapi.org/api/timezone/Etc/UTC',
-  'https://httpbin.org/get',
+  'https://cloudflare.com/cdn-cgi/trace',
+  'https://api.github.com',
 ];
 
 /**
