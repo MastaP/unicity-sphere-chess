@@ -13,7 +13,7 @@ const TIME_OPTIONS = [3, 5, 10] as const;
 
 export function ChallengeDialog({ onChallenge, status, opponent, onCancel }: ChallengeDialogProps) {
   const [nametag, setNametag] = useState('');
-  const [color, setColor] = useState<PlayerColor>('white');
+  const [color, setColor] = useState<PlayerColor | 'random'>('random');
   const [timeMinutes, setTimeMinutes] = useState<3 | 5 | 10>(5);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
@@ -59,7 +59,10 @@ export function ChallengeDialog({ onChallenge, status, opponent, onCancel }: Cha
     const tag = cleaned.startsWith('@') ? cleaned : `@${cleaned}`;
 
     try {
-      await onChallenge(tag, color, timeMinutes);
+      const resolvedColor: PlayerColor = color === 'random'
+        ? (Math.random() < 0.5 ? 'white' : 'black')
+        : color;
+      await onChallenge(tag, resolvedColor, timeMinutes);
     } catch (err: any) {
       setError(err?.message ?? 'Failed to send challenge');
     }
@@ -131,7 +134,7 @@ export function ChallengeDialog({ onChallenge, status, opponent, onCancel }: Cha
       <fieldset className="mb-4">
         <legend className="text-neutral-400 text-sm mb-2">Play as</legend>
         <div className="flex gap-2">
-          {(['white', 'black'] as const).map((c) => (
+          {(['random', 'white', 'black'] as const).map((c) => (
             <button
               key={c}
               type="button"
@@ -141,11 +144,13 @@ export function ChallengeDialog({ onChallenge, status, opponent, onCancel }: Cha
                   color === c
                     ? c === 'white'
                       ? 'bg-neutral-100 text-neutral-900'
-                      : 'bg-neutral-700 text-white ring-2 ring-orange-500'
+                      : c === 'black'
+                        ? 'bg-neutral-700 text-white ring-2 ring-orange-500'
+                        : 'bg-orange-500 text-white'
                     : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
                 }`}
             >
-              {c === 'white' ? '\u2654 White' : '\u265A Black'}
+              {c === 'white' ? '\u2654 White' : c === 'black' ? '\u265A Black' : '\u2696 Random'}
             </button>
           ))}
         </div>
