@@ -139,13 +139,39 @@ export function GameScreen({ connection }: GameScreenProps) {
               chess={state.chess}
               myColor={state.myColor}
               onMove={makeMove}
-              disabled={!isMyTurn || isGameOver}
+              disabled={!isMyTurn || isGameOver || state.drawOfferedBy === 'opponent'}
               lastMove={
                 state.moveHistory.length > 0
                   ? state.moveHistory[state.moveHistory.length - 1]
                   : undefined
               }
             />
+            {state.drawOfferedBy === 'opponent' && !isGameOver && (
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center z-10 p-4">
+                <p className="text-orange-300 text-lg font-semibold mb-1">
+                  Draw Offered
+                </p>
+                <p className="text-neutral-400 text-sm mb-6">
+                  {opponentNametag} offers a draw
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={acceptDraw}
+                    className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold
+                               rounded-xl cursor-pointer transition-colors text-sm"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={declineDraw}
+                    className="px-6 py-2.5 bg-white/10 hover:bg-white/15 text-neutral-300
+                               rounded-xl cursor-pointer transition-colors text-sm"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            )}
             {isGameOver && state.result && (
               <GameOverOverlay
                 result={state.result}
@@ -182,29 +208,6 @@ export function GameScreen({ connection }: GameScreenProps) {
         {/* Side panel */}
         <div className="flex flex-col gap-2 w-full lg:w-64 shrink-0">
           <MoveHistory moves={state.moveHistory} />
-
-          {/* Draw offer banner */}
-          {state.drawOfferedBy === 'opponent' && !isGameOver && (
-            <div className="bg-orange-900/15 border border-orange-500/30 rounded-2xl p-3">
-              <p className="text-orange-300 text-sm mb-2">
-                {opponentNametag} offers a draw
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={acceptDraw}
-                  className="flex-1 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm rounded-xl cursor-pointer transition-colors"
-                >
-                  Accept
-                </button>
-                <button
-                  onClick={declineDraw}
-                  className="flex-1 px-3 py-1.5 bg-white/10 hover:bg-white/15 text-neutral-300 text-sm rounded-xl cursor-pointer transition-colors"
-                >
-                  Decline
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* Action buttons */}
           {!isGameOver && (
