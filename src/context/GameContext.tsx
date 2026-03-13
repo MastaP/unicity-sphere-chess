@@ -123,6 +123,9 @@ export function GameProvider({ connection, children }: GameProviderProps) {
       const g = gameRef.current;
       if (!g) return;
 
+      // Ignore our own echoed messages — the SDK may deliver sent DMs back to us
+      if (senderPubkey === connection.identity?.chainPubkey?.slice(2)) return;
+
       // Handle incoming challenges separately
       if (msg.action === ACTION.CHALLENGE) {
         const colorMap: Record<ChallengeColor, PlayerColor> = {

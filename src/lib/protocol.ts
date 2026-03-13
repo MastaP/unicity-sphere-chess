@@ -23,7 +23,7 @@ export function encodeMessage(msg: ParsedMessage): string {
     case ACTION.DECLINE:
       return `${prefix}:${ACTION.DECLINE}`;
     case ACTION.MOVE:
-      return `${prefix}:${ACTION.MOVE}:${msg.san}:${msg.clockMs}`;
+      return `${prefix}:${ACTION.MOVE}:${msg.san}:${msg.clockMs}:${msg.turn}`;
     case ACTION.RESIGN:
       return `${prefix}:${ACTION.RESIGN}`;
     case ACTION.DRAW_OFFER:
@@ -86,13 +86,15 @@ export function parseMessage(raw: string): ParsedMessage | null {
       return { action: ACTION.DECLINE, gameId };
 
     case ACTION.MOVE: {
-      if (parts.length < 5) return null;
+      if (parts.length < 6) return null;
       const san = parts[3];
       const clockStr = parts[4];
-      if (!san || !clockStr) return null;
+      const turn = parts[5];
+      if (!san || !clockStr || !turn) return null;
+      if (turn !== 'w' && turn !== 'b') return null;
       const clockMs = parseInt(clockStr, 10);
       if (isNaN(clockMs)) return null;
-      return { action: ACTION.MOVE, gameId, san, clockMs };
+      return { action: ACTION.MOVE, gameId, san, clockMs, turn };
     }
 
     case ACTION.RESIGN:

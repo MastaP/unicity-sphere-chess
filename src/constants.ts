@@ -11,7 +11,7 @@ export const WALLET_URL = 'https://sphere.unicity.network';
 
 export const TIME_CONTROLS = [3, 5, 10] as const;
 
-export const PROTOCOL_PREFIX = 'uc1';
+export const PROTOCOL_PREFIX = 'unichess';
 export const HEARTBEAT_INTERVAL_MS = 30_000;
 export const CHALLENGE_TIMEOUT_MS = 300_000;
 export const GAME_ID_LENGTH = 8;

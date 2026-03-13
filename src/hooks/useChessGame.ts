@@ -310,13 +310,18 @@ export function useChessGame(
       if (!moveResult) return null;
 
       const clockMs = Math.round(s.myClockMs);
-      dispatch({ type: 'APPLY_MOVE', san, clockMs, isMyMove: true });
+      const action: GameAction = { type: 'APPLY_MOVE', san, clockMs, isMyMove: true };
+      dispatch(action);
+      // Eagerly sync stateRef so incoming messages processed before the next
+      // React render already see the updated chess position.
+      stateRef.current = gameReducer(stateRef.current, action);
 
       const msg: ParsedMessage = {
         action: ACTION.MOVE,
         gameId: s.gameId,
         san,
         clockMs,
+        turn: s.chess.turn(),
       };
 
       // Check for terminal position after move
@@ -337,18 +342,25 @@ export function useChessGame(
       switch (msg.action) {
         case ACTION.MOVE: {
           if (s.status !== 'playing') return;
+          // Reject moves claiming to be from our own color
+          const myTurnChar = s.myColor === 'white' ? 'w' : 'b';
+          if (msg.turn === myTurnChar) return;
           if (isMyTurn()) return;
 
           const testChess = new Chess(s.chess.fen());
           const moveResult = testChess.move(msg.san);
           if (!moveResult) return;
 
-          dispatch({
+          const action: GameAction = {
             type: 'APPLY_MOVE',
             san: msg.san,
             clockMs: msg.clockMs,
             isMyMove: false,
-          });
+          };
+          dispatch(action);
+          // Eagerly sync stateRef so duplicate DMs see the updated position
+          // and are rejected by isMyTurn() or chess validation.
+          stateRef.current = gameReducer(stateRef.current, action);
 
           const terminal = isGameTerminal(testChess);
           if (terminal) {

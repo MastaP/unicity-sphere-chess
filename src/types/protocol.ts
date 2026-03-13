@@ -52,6 +52,7 @@ export interface MoveMessage {
   gameId: string;
   san: string;
   clockMs: number;
+  turn: 'w' | 'b';
 }
 
 export interface ResignMessage {
