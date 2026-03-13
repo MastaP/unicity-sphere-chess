@@ -97,10 +97,8 @@ export function GameScreen({ connection }: GameScreenProps) {
   const topColor = state.myColor === 'white' ? 'black' : 'white';
   const bottomColor = state.myColor;
 
-  const topClockMs =
-    state.myColor === 'white' ? state.opponentClockMs : state.myClockMs;
-  const bottomClockMs =
-    state.myColor === 'white' ? state.myClockMs : state.opponentClockMs;
+  const topClockMs = state.opponentClockMs;
+  const bottomClockMs = state.myClockMs;
   const topActive =
     (state.chess.turn() === 'w') === (topColor === 'white') && !isGameOver;
   const bottomActive =
