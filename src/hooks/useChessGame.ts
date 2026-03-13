@@ -5,6 +5,7 @@ import type { ParsedMessage } from '../types/protocol';
 import { ACTION } from '../types/protocol';
 import { isGameTerminal } from '../lib/chess-helpers';
 import { HEARTBEAT_INTERVAL_MS } from '../constants';
+import { correctedNow } from '../lib/ntp';
 
 type GameAction =
   | { type: 'INIT_CHALLENGE'; gameId: string; myColor: PlayerColor; timeMinutes: 3 | 5 | 10; opponentNametag: string; opponentPubkey: string }
@@ -70,7 +71,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       const record: MoveRecord = {
         san: action.san,
         clockMs: action.clockMs,
-        timestamp: Date.now(),
+        timestamp: correctedNow(),
       };
 
       if (action.isMyMove) {
@@ -79,7 +80,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           chess,
           moveHistory: [...state.moveHistory, record],
           myClockMs: action.clockMs,
-          lastHeartbeatAt: Date.now(),
+          lastHeartbeatAt: correctedNow(),
         };
       }
 
@@ -88,7 +89,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         chess,
         moveHistory: [...state.moveHistory, record],
         opponentClockMs: action.clockMs,
-        lastHeartbeatAt: Date.now(),
+        lastHeartbeatAt: correctedNow(),
       };
     }
 
@@ -102,7 +103,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         opponentClockMs: action.clockMs,
-        lastHeartbeatAt: Date.now(),
+        lastHeartbeatAt: correctedNow(),
       };
     }
 
@@ -185,6 +186,8 @@ export function useChessGame(
           const newClock = Math.round(Math.max(0, s.myClockMs - delta));
           dispatch({ type: 'SET_CLOCK', who: 'me', clockMs: newClock });
 
+          // Only detect timeout on our OWN clock — we are authoritative
+          // for our own time. The opponent handles their own timeout.
           if (newClock <= 0) {
             const result: GameResult = {
               outcome: s.myColor === 'white' ? 'black-wins' : 'white-wins',
@@ -202,25 +205,10 @@ export function useChessGame(
             return;
           }
         } else {
+          // Opponent's clock: display estimate only, no timeout detection.
+          // Their client is authoritative for their clock.
           const newClock = Math.round(Math.max(0, s.opponentClockMs - delta));
           dispatch({ type: 'SET_CLOCK', who: 'opponent', clockMs: newClock });
-
-          if (newClock <= 0) {
-            const result: GameResult = {
-              outcome: s.myColor === 'white' ? 'white-wins' : 'black-wins',
-              reason: 'timeout',
-            };
-            dispatch({ type: 'GAME_OVER', result });
-            const goMsg: ParsedMessage = {
-              action: ACTION.GAMEOVER,
-              gameId: s.gameId,
-              result: s.myColor === 'white' ? 'w' : 'b',
-              reason: 'timeout',
-            };
-            gameOverCallbackRef.current?.(result, goMsg);
-            clockRef.current = null;
-            return;
-          }
         }
       }
 
