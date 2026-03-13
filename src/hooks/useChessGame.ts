@@ -83,12 +83,11 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         };
       }
 
-      const clampedClock = Math.min(action.clockMs, state.opponentClockMs);
       return {
         ...state,
         chess,
         moveHistory: [...state.moveHistory, record],
-        opponentClockMs: clampedClock,
+        opponentClockMs: action.clockMs,
         lastHeartbeatAt: Date.now(),
       };
     }
@@ -100,10 +99,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, opponentClockMs: action.clockMs };
 
     case 'HEARTBEAT_RECEIVED': {
-      const clampedClock = Math.min(action.clockMs, state.opponentClockMs);
       return {
         ...state,
-        opponentClockMs: clampedClock,
+        opponentClockMs: action.clockMs,
         lastHeartbeatAt: Date.now(),
       };
     }

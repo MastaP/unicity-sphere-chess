@@ -15,7 +15,7 @@ interface DirectMessage {
 
 type MessageHandler = (msg: ParsedMessage, senderPubkey: string) => void;
 
-const DM_RETRY_COUNT = 3;
+const DM_RETRY_COUNT = 1;
 const DM_RETRY_DELAY_MS = 1000;
 
 async function sleep(ms: number): Promise<void> {
@@ -44,12 +44,23 @@ export function useGameMessages(
   const gameIdRef = useRef(gameId);
   gameIdRef.current = gameId;
 
+  const seenDmIds = useRef(new Set<string>());
+
   useEffect(() => {
     if (!client) return;
 
     const unsub = client.on('message:dm', (data: unknown) => {
       const dm = data as DirectMessage;
       if (!dm.content?.startsWith(`${PROTOCOL_PREFIX}:`)) return;
+
+      // Deduplicate: skip DMs we've already processed
+      if (seenDmIds.current.has(dm.id)) return;
+      seenDmIds.current.add(dm.id);
+      // Prevent unbounded growth — prune when set gets large
+      if (seenDmIds.current.size > 500) {
+        const entries = [...seenDmIds.current];
+        seenDmIds.current = new Set(entries.slice(-200));
+      }
 
       const parsed = parseMessage(dm.content);
       if (!parsed) return;
