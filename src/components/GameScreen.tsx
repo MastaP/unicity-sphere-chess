@@ -25,6 +25,7 @@ export function GameScreen({ connection }: GameScreenProps) {
     abort,
     claimDisconnectWin,
     startChallenge,
+    offerRematch,
     acceptChallenge,
     declineChallenge,
     incomingChallenge,
@@ -176,19 +177,12 @@ export function GameScreen({ connection }: GameScreenProps) {
               <GameOverOverlay
                 result={state.result}
                 myColor={state.myColor}
-                onRematch={() => {
-                  const swappedColor =
-                    state.myColor === 'white' ? 'black' : 'white';
-                  if (state.opponent) {
-                    startChallenge(
-                      state.opponent.nametag,
-                      swappedColor,
-                      state.timeControlMinutes,
-                    );
-                  }
-                }}
+                onRematch={offerRematch}
                 onNewGame={reset}
                 pgn={state.chess.pgn()}
+                incomingChallenge={incomingChallenge}
+                onAcceptChallenge={acceptChallenge}
+                onDeclineChallenge={declineChallenge}
               />
             )}
           </div>

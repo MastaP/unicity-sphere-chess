@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { GameResult, PlayerColor } from '../types/game.js';
+import type { GameResult, PlayerColor, IncomingChallenge } from '../types/game.js';
 import { ENTRY_FEE } from '../constants.js';
 
 interface GameOverOverlayProps {
@@ -8,6 +8,9 @@ interface GameOverOverlayProps {
   onRematch: () => void;
   onNewGame: () => void;
   pgn: string;
+  incomingChallenge?: IncomingChallenge | null;
+  onAcceptChallenge?: () => void;
+  onDeclineChallenge?: () => void;
 }
 
 function getPayoutText(result: GameResult, myColor: PlayerColor): string {
@@ -54,6 +57,9 @@ export function GameOverOverlay({
   onRematch,
   onNewGame,
   pgn,
+  incomingChallenge,
+  onAcceptChallenge,
+  onDeclineChallenge,
 }: GameOverOverlayProps) {
   const [copied, setCopied] = useState(false);
 
@@ -97,22 +103,53 @@ export function GameOverOverlay({
 
       {/* Payout */}
       <p
-        className={`text-lg font-semibold mb-6 ${
+        className={`text-lg font-semibold mb-4 ${
           iWon ? 'text-green-300' : isDraw ? 'text-neutral-300' : 'text-red-300'
         }`}
       >
         {getPayoutText(result, myColor)}
       </p>
 
+      {/* Incoming rematch offer */}
+      {incomingChallenge && onAcceptChallenge && onDeclineChallenge && (
+        <div className="bg-orange-500/15 border border-orange-500/40 rounded-xl p-3 mb-4 w-full max-w-52 text-center">
+          <p className="text-orange-300 text-sm font-medium mb-2">
+            Rematch offer!
+          </p>
+          <p className="text-neutral-400 text-xs mb-3">
+            {incomingChallenge.timeMinutes} min
+            {incomingChallenge.color === 'white' ? ' — you play white' : ' — you play black'}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={onAcceptChallenge}
+              className="flex-1 px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold
+                         rounded-xl cursor-pointer transition-colors"
+            >
+              Accept
+            </button>
+            <button
+              onClick={onDeclineChallenge}
+              className="flex-1 px-3 py-2 bg-white/10 hover:bg-white/15 text-neutral-300 text-sm
+                         rounded-xl cursor-pointer transition-colors"
+            >
+              Decline
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Action buttons */}
       <div className="flex flex-col gap-2 w-full max-w-48">
-        <button
-          onClick={onRematch}
-          className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold
-                     rounded-xl cursor-pointer transition-colors text-sm"
-        >
-          Rematch
-        </button>
+        {!incomingChallenge && (
+          <button
+            onClick={onRematch}
+            className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold
+                       rounded-xl cursor-pointer transition-colors text-sm"
+          >
+            Rematch
+          </button>
+        )}
         <button
           onClick={copyPgn}
           className="px-4 py-2 bg-white/10 hover:bg-white/15 text-neutral-300

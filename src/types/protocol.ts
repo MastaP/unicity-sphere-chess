@@ -10,6 +10,7 @@ export const ACTION = {
   HEARTBEAT: 'hb',
   ABORT: 'ab',
   GAMEOVER: 'go',
+  REMATCH: 'rm',
 } as const;
 
 export type ActionCode = (typeof ACTION)[keyof typeof ACTION];
@@ -93,6 +94,14 @@ export interface GameOverMessage {
   reason: GameOverReason;
 }
 
+export interface RematchMessage {
+  action: typeof ACTION.REMATCH;
+  gameId: string;
+  newGameId: string;
+  color: ChallengeColor;
+  timeMinutes: number;
+}
+
 export type ParsedMessage =
   | ChallengeMessage
   | AcceptMessage
@@ -104,4 +113,5 @@ export type ParsedMessage =
   | DrawDeclineMessage
   | HeartbeatMessage
   | AbortMessage
-  | GameOverMessage;
+  | GameOverMessage
+  | RematchMessage;

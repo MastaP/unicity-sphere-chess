@@ -25,6 +25,7 @@ export interface GameContextValue {
     color: PlayerColor,
     timeMinutes: 3 | 5 | 10,
   ) => Promise<void>;
+  offerRematch: () => Promise<void>;
   acceptChallenge: () => Promise<void>;
   declineChallenge: () => void;
   incomingChallenge: IncomingChallenge | null;
@@ -141,6 +142,23 @@ export function GameProvider({ connection, children }: GameProviderProps) {
           _senderPubkey: senderPubkey,
           _challengerColor: msg.color === 'w' ? 'white' : msg.color === 'b' ? 'black' : 'white',
         } as IncomingChallenge & { _senderPubkey: string; _challengerColor: PlayerColor });
+        return;
+      }
+
+      // Handle incoming rematch offer
+      if (msg.action === ACTION.REMATCH) {
+        const colorMap: Record<ChallengeColor, PlayerColor> = {
+          w: 'black',
+          b: 'white',
+          r: 'white',
+        };
+        setIncomingChallenge({
+          nametag: g.state.opponent?.nametag ?? '',
+          color: colorMap[msg.color],
+          timeMinutes: msg.timeMinutes as 3 | 5 | 10,
+          gameId: msg.newGameId,
+          _senderPubkey: senderPubkey,
+        } as IncomingChallenge & { _senderPubkey: string });
         return;
       }
 
@@ -306,6 +324,45 @@ export function GameProvider({ connection, children }: GameProviderProps) {
       game.setStatus('awaiting-accept');
     },
 
+    async offerRematch() {
+      const opponent = game.state.opponent;
+      if (!opponent) return;
+
+      const swappedColor: PlayerColor =
+        game.state.myColor === 'white' ? 'black' : 'white';
+      const newGameId = generateGameId();
+      const timeMinutes = game.state.timeControlMinutes;
+
+      // Deposit for the new game
+      const depositOk = await wager.deposit(newGameId);
+      if (!depositOk) {
+        throw new Error('Deposit failed');
+      }
+
+      const challengeColor: ChallengeColor =
+        swappedColor === 'white' ? 'w' : 'b';
+
+      const msg: ParsedMessage = {
+        action: ACTION.REMATCH,
+        gameId: game.state.gameId,
+        newGameId,
+        color: challengeColor,
+        timeMinutes,
+      };
+      await messaging.sendMessage(opponent.nametag, msg);
+
+      // Init the new game locally and wait for accept
+      game.initChallenge({
+        gameId: newGameId,
+        myColor: swappedColor,
+        timeMinutes: timeMinutes as 3 | 5 | 10,
+        opponentNametag: opponent.nametag,
+        opponentPubkey: opponent.pubkey,
+      });
+      game.markDepositDone('me');
+      game.setStatus('awaiting-accept');
+    },
+
     async acceptChallenge() {
       if (!incomingChallenge) return;
       const challenge = incomingChallenge as IncomingChallenge & {
@@ -346,6 +403,8 @@ export function GameProvider({ connection, children }: GameProviderProps) {
       };
       messaging.sendMessage(incomingChallenge.nametag, msg);
       setIncomingChallenge(null);
+      // Reset to lobby so both players return to the new game screen
+      game.reset();
     },
 
     resign() {

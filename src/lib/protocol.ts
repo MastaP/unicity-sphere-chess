@@ -38,6 +38,8 @@ export function encodeMessage(msg: ParsedMessage): string {
       return `${prefix}:${ACTION.ABORT}`;
     case ACTION.GAMEOVER:
       return `${prefix}:${ACTION.GAMEOVER}:${msg.result}:${msg.reason}`;
+    case ACTION.REMATCH:
+      return `${prefix}:${ACTION.REMATCH}:${msg.newGameId}:${msg.color}:${msg.timeMinutes}`;
   }
 }
 
@@ -133,6 +135,25 @@ export function parseMessage(raw: string): ParsedMessage | null {
         gameId,
         result: result as GameOverResult,
         reason: reason as GameOverReason,
+      };
+    }
+
+    case ACTION.REMATCH: {
+      if (parts.length < 6) return null;
+      const newGameId = parts[3];
+      const rmColor = parts[4];
+      const rmTimeStr = parts[5];
+      if (!newGameId || newGameId.length !== GAME_ID_LENGTH) return null;
+      if (!rmColor || !VALID_CHALLENGE_COLORS.has(rmColor)) return null;
+      if (!rmTimeStr) return null;
+      const rmTime = parseInt(rmTimeStr, 10);
+      if (isNaN(rmTime)) return null;
+      return {
+        action: ACTION.REMATCH,
+        gameId,
+        newGameId,
+        color: rmColor as ChallengeColor,
+        timeMinutes: rmTime,
       };
     }
 
