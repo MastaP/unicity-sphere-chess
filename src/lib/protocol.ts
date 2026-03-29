@@ -26,7 +26,7 @@ export function encodeMessage(msg: ParsedMessage): string {
     case ACTION.DECLINE:
       return `${prefix}:${ACTION.DECLINE}`;
     case ACTION.MOVE:
-      return `${prefix}:${ACTION.MOVE}:${msg.san}:${msg.clockMs}:${msg.turn}`;
+      return `${prefix}:${ACTION.MOVE}:${msg.san}:${msg.clockMs}:${msg.color}:${msg.moveNum}`;
     case ACTION.RESIGN:
       return `${prefix}:${ACTION.RESIGN}`;
     case ACTION.DRAW_OFFER:
@@ -109,15 +109,16 @@ export function parseMessage(raw: string): ParsedMessage | null {
       return { action: ACTION.DECLINE, gameId };
 
     case ACTION.MOVE: {
-      if (parts.length < 6) return null;
+      if (parts.length < 7) return null;
       const san = parts[3];
       const clockStr = parts[4];
-      const turn = parts[5];
-      if (!san || !clockStr || !turn) return null;
-      if (turn !== 'w' && turn !== 'b') return null;
+      const color = parts[5];
+      const moveNum = parseInt(parts[6]!, 10);
+      if (!san || !clockStr || !color) return null;
+      if (color !== 'w' && color !== 'b') return null;
       const clockMs = parseInt(clockStr, 10);
-      if (isNaN(clockMs)) return null;
-      return { action: ACTION.MOVE, gameId, san, clockMs, turn };
+      if (isNaN(clockMs) || isNaN(moveNum)) return null;
+      return { action: ACTION.MOVE, gameId, san, clockMs, color, moveNum };
     }
 
     case ACTION.RESIGN:

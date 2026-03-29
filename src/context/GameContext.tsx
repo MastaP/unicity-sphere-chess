@@ -95,7 +95,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
   const gameRef = useRef<ReturnType<typeof useChessGame>>(null!);
   const messagingRef = useRef<ReturnType<typeof useGameMessages>>(null!);
 
-  const onSendHeartbeat = useCallback(
+  const onPollSend = useCallback(
     (msg: ParsedMessage) => {
       const g = gameRef.current;
       const m = messagingRef.current;
@@ -117,7 +117,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
     [],
   );
 
-  const game = useChessGame(onSendHeartbeat, onGameOverDetected);
+  const game = useChessGame(onPollSend, onGameOverDetected);
   gameRef.current = game;
 
   const handleIncomingMessage = useCallback(
@@ -181,6 +181,13 @@ export function GameProvider({ connection, children }: GameProviderProps) {
           g.reset();
         }
         return;
+      }
+
+      // Implicit accept: if we receive a move for our game while not yet playing,
+      // treat it as accept + move (handles missed 'ok' DMs)
+      if (msg.action === ACTION.MOVE && g.state.gameId && msg.gameId === g.state.gameId
+          && g.state.status !== 'playing' && g.state.status !== 'ended') {
+        g.setStatus('playing');
       }
 
       // All other messages routed to game handler

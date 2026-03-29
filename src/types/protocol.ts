@@ -55,7 +55,9 @@ export interface MoveMessage {
   gameId: string;
   san: string;
   clockMs: number;
-  turn: 'w' | 'b';
+  /** Color of the player who made this move */
+  color: 'w' | 'b';
+  moveNum: number;
 }
 
 export interface ResignMessage {
