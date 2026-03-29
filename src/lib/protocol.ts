@@ -16,7 +16,10 @@ export function encodeMessage(msg: ParsedMessage): string {
 
   switch (msg.action) {
     case ACTION.CHALLENGE:
-      // Challenge is sent as a clickable URL with protocol fields as query params
+      // Bot challenges use the unichess: protocol format; human challenges use the URL
+      if (msg.elo != null) {
+        return `${prefix}:${ACTION.CHALLENGE}:${msg.color}:${msg.timeMinutes}:${msg.elo}`;
+      }
       return msg.gameUrl;
     case ACTION.ACCEPT:
       return `${prefix}:${ACTION.ACCEPT}`;
@@ -81,6 +84,24 @@ export function parseMessage(raw: string): ParsedMessage | null {
   if (!action) return null;
 
   switch (action) {
+    case ACTION.CHALLENGE: {
+      // unichess:<gameId>:ch:<color>:<timeMinutes>[:<elo>]
+      if (parts.length < 5) return null;
+      const chColor = parts[3];
+      if (!chColor || !VALID_CHALLENGE_COLORS.has(chColor)) return null;
+      const chTime = parseInt(parts[4]!, 10);
+      if (isNaN(chTime) || chTime <= 0) return null;
+      const chElo = parts[5] ? parseInt(parts[5], 10) : undefined;
+      return {
+        action: ACTION.CHALLENGE,
+        gameId,
+        color: chColor as ChallengeColor,
+        timeMinutes: chTime,
+        gameUrl: raw,
+        ...(chElo != null && !isNaN(chElo) ? { elo: chElo } : {}),
+      };
+    }
+
     case ACTION.ACCEPT:
       return { action: ACTION.ACCEPT, gameId };
 

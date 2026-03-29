@@ -310,7 +310,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
         color === 'white' ? 'w' : 'b';
       const baseUrl = `${window.location.origin}${window.location.pathname}`;
       const myNametag = connection.identity?.nametag ?? '';
-      const gameUrl = buildChallengeUrl(baseUrl, gameId, challengeColor, timeMinutes, myNametag, elo);
+      const gameUrl = buildChallengeUrl(baseUrl, gameId, challengeColor, timeMinutes, myNametag);
 
       const msg: ParsedMessage = {
         action: ACTION.CHALLENGE,
@@ -452,6 +452,15 @@ export function GameProvider({ connection, children }: GameProviderProps) {
     },
 
     reset() {
+      // If we're waiting for accept, notify opponent that we cancelled
+      if (game.state.gameId && game.state.opponent?.nametag &&
+          (game.state.status === 'awaiting-accept' || game.state.status === 'challenging')) {
+        const msg: ParsedMessage = {
+          action: ACTION.ABORT,
+          gameId: game.state.gameId,
+        };
+        messaging.sendMessage(game.state.opponent.nametag, msg).catch(() => {});
+      }
       game.reset();
       setIncomingChallenge(null);
     },

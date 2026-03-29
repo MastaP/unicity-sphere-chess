@@ -16,7 +16,7 @@ export const BOT_OPPONENTS: BotOpponent[] = [
     name: 'T1mo',
     nametag: CHESS_BOT_NAMETAG,
     elo: 800,
-    avatar: `${import.meta.env.BASE_URL}avatars/chess_t1mo.png`,
+    avatar: 'avatars/chess_t1mo.png',
     description: 'Beginner',
   },
   {
@@ -24,7 +24,7 @@ export const BOT_OPPONENTS: BotOpponent[] = [
     name: 'Pavel',
     nametag: CHESS_BOT_NAMETAG,
     elo: 1300,
-    avatar: `${import.meta.env.BASE_URL}avatars/chess_pavel.png`,
+    avatar: 'avatars/chess_pavel.png',
     description: 'Intermediate',
   },
   {
@@ -32,7 +32,7 @@ export const BOT_OPPONENTS: BotOpponent[] = [
     name: 'Ahto',
     nametag: CHESS_BOT_NAMETAG,
     elo: 2100,
-    avatar: `${import.meta.env.BASE_URL}avatars/chess_ahto.png`,
+    avatar: 'avatars/chess_ahto.png',
     description: 'Expert',
   },
 ];
