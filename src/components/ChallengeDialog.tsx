@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import type { PlayerColor, GameStatus } from '../types/game.js';
 import { CHALLENGE_TIMEOUT_MS, ENTRY_FEE } from '../constants.js';
+import { BOT_OPPONENTS, type BotOpponent } from '../lib/bot-opponents.js';
 
 interface ChallengeDialogProps {
-  onChallenge: (opponent: string, color: PlayerColor, timeMinutes: 3 | 5 | 10) => Promise<void>;
+  onChallenge: (opponent: string, color: PlayerColor, timeMinutes: 3 | 5 | 10, elo?: number) => Promise<void>;
   status: GameStatus;
   opponent: string | null;
   onCancel: () => void;
@@ -11,7 +12,11 @@ interface ChallengeDialogProps {
 
 const TIME_OPTIONS = [3, 5, 10] as const;
 
+type OpponentMode = 'bot' | 'human';
+
 export function ChallengeDialog({ onChallenge, status, opponent, onCancel }: ChallengeDialogProps) {
+  const [mode, setMode] = useState<OpponentMode>('bot');
+  const [selectedBot, setSelectedBot] = useState<BotOpponent | null>(null);
   const [nametag, setNametag] = useState('');
   const [color, setColor] = useState<PlayerColor | 'random'>('random');
   const [timeMinutes, setTimeMinutes] = useState<3 | 5 | 10>(5);
@@ -50,19 +55,31 @@ export function ChallengeDialog({ onChallenge, status, opponent, onCancel }: Cha
     e.preventDefault();
     setError(null);
 
-    const cleaned = nametag.trim();
-    if (!cleaned) {
-      setError('Enter an opponent nametag');
-      return;
-    }
+    let tag: string;
+    let elo: number | undefined;
 
-    const tag = cleaned.startsWith('@') ? cleaned : `@${cleaned}`;
+    if (mode === 'bot') {
+      if (!selectedBot) {
+        setError('Select a bot opponent');
+        return;
+      }
+      tag = `@${selectedBot.nametag}`;
+      elo = selectedBot.elo;
+    } else {
+      const cleaned = nametag.trim();
+      if (!cleaned) {
+        setError('Enter an opponent nametag');
+        return;
+      }
+      tag = cleaned.startsWith('@') ? cleaned : `@${cleaned}`;
+      elo = undefined; // No elo for human opponents
+    }
 
     try {
       const resolvedColor: PlayerColor = color === 'random'
         ? (Math.random() < 0.5 ? 'white' : 'black')
         : color;
-      await onChallenge(tag, resolvedColor, timeMinutes);
+      await onChallenge(tag, resolvedColor, timeMinutes, elo);
     } catch (err: any) {
       setError(err?.message ?? 'Failed to send challenge');
     }
@@ -113,22 +130,81 @@ export function ChallengeDialog({ onChallenge, status, opponent, onCancel }: Cha
     >
       <h2 className="text-lg font-semibold text-white mb-4">New Game</h2>
 
-      {/* Opponent nametag */}
-      <label className="block mb-4">
-        <span className="text-neutral-400 text-sm">Opponent</span>
-        <div className="relative mt-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">@</span>
-          <input
-            type="text"
-            value={nametag.replace(/^@/, '')}
-            onChange={(e) => setNametag(e.target.value)}
-            placeholder="nametag"
-            className="w-full bg-neutral-800 border border-neutral-700 rounded-xl pl-8 pr-3 py-2.5
-                       text-white placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500
-                       transition-colors"
-          />
+      {/* Mode toggle: Bot / Human */}
+      <div className="flex mb-4 bg-neutral-800 rounded-xl p-1">
+        <button
+          type="button"
+          onClick={() => setMode('bot')}
+          className={`flex-1 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors
+            ${mode === 'bot' ? 'bg-neutral-700 text-white' : 'text-neutral-400 hover:text-neutral-300'}`}
+        >
+          Play vs Bot
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('human')}
+          className={`flex-1 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors
+            ${mode === 'human' ? 'bg-neutral-700 text-white' : 'text-neutral-400 hover:text-neutral-300'}`}
+        >
+          Play vs Human
+        </button>
+      </div>
+
+      {/* Bot selection */}
+      {mode === 'bot' && (
+        <div className="mb-4">
+          <span className="text-neutral-400 text-sm">Choose opponent</span>
+          <div className="flex gap-2 mt-2">
+            {BOT_OPPONENTS.map((bot) => (
+              <button
+                key={bot.id}
+                type="button"
+                onClick={() => setSelectedBot(bot)}
+                title={`ELO ${bot.elo}`}
+                className={`group flex-1 flex flex-col items-center gap-1.5 p-3 rounded-xl cursor-pointer transition-all
+                  ${selectedBot?.id === bot.id
+                    ? 'bg-orange-500/15 border-2 border-orange-500'
+                    : 'bg-neutral-800 border-2 border-transparent hover:bg-neutral-750 hover:border-neutral-600'
+                  }`}
+              >
+                <img
+                  src={bot.avatar}
+                  alt={bot.name}
+                  className="w-[4.5rem] h-[4.5rem] rounded-full"
+                />
+                <span className={`text-sm font-medium ${selectedBot?.id === bot.id ? 'text-orange-300' : 'text-neutral-300'}`}>
+                  {bot.name}
+                </span>
+                <span className="text-xs text-neutral-500 group-hover:hidden">
+                  {bot.description}
+                </span>
+                <span className={`text-xs font-mono hidden group-hover:block ${selectedBot?.id === bot.id ? 'text-orange-400' : 'text-neutral-500'}`}>
+                  ELO {bot.elo}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
-      </label>
+      )}
+
+      {/* Human opponent nametag */}
+      {mode === 'human' && (
+        <label className="block mb-4">
+          <span className="text-neutral-400 text-sm">Opponent</span>
+          <div className="relative mt-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">@</span>
+            <input
+              type="text"
+              value={nametag.replace(/^@/, '')}
+              onChange={(e) => setNametag(e.target.value)}
+              placeholder="nametag"
+              className="w-full bg-neutral-800 border border-neutral-700 rounded-xl pl-8 pr-3 py-2.5
+                         text-white placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500
+                         transition-colors"
+            />
+          </div>
+        </label>
+      )}
 
       {/* Color selection */}
       <fieldset className="mb-4">

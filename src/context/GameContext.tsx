@@ -24,6 +24,7 @@ export interface GameContextValue {
     opponent: string,
     color: PlayerColor,
     timeMinutes: 3 | 5 | 10,
+    elo?: number,
   ) => Promise<void>;
   offerRematch: () => Promise<void>;
   acceptChallenge: () => Promise<void>;
@@ -283,7 +284,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
       return true;
     },
 
-    async startChallenge(opponent, color, timeMinutes) {
+    async startChallenge(opponent, color, timeMinutes, elo?) {
       const gameId = generateGameId();
       const opponentPubkey = '';
 
@@ -309,7 +310,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
         color === 'white' ? 'w' : 'b';
       const baseUrl = `${window.location.origin}${window.location.pathname}`;
       const myNametag = connection.identity?.nametag ?? '';
-      const gameUrl = buildChallengeUrl(baseUrl, gameId, challengeColor, timeMinutes, myNametag);
+      const gameUrl = buildChallengeUrl(baseUrl, gameId, challengeColor, timeMinutes, myNametag, elo);
 
       const msg: ParsedMessage = {
         action: ACTION.CHALLENGE,
@@ -317,6 +318,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
         color: challengeColor,
         timeMinutes,
         gameUrl,
+        ...(elo != null ? { elo } : {}),
       };
       console.log('[GameContext] startChallenge: sending challenge DM...');
       await messaging.sendMessage(opponent, msg);

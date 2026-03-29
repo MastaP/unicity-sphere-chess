@@ -180,12 +180,16 @@ function parseChallengeUrl(raw: string): ParsedMessage | null {
     const timeMinutes = parseInt(timeStr, 10);
     if (isNaN(timeMinutes)) return null;
 
+    const eloStr = url.searchParams.get('elo');
+    const elo = eloStr ? parseInt(eloStr, 10) : undefined;
+
     return {
       action: ACTION.CHALLENGE,
       gameId,
       color: color as ChallengeColor,
       timeMinutes,
       gameUrl: raw,
+      ...(elo != null && !isNaN(elo) ? { elo } : {}),
     };
   } catch {
     return null;
@@ -196,6 +200,8 @@ function parseChallengeUrl(raw: string): ParsedMessage | null {
  * Build a challenge URL with game params as query parameters.
  * Uses unicity-connect:// protocol for deep link support in Sphere DMs.
  * Sphere converts this back to http(s) when opening.
+ *
+ * @param elo - Optional ELO rating for bot opponents. Omitted for human players.
  */
 export function buildChallengeUrl(
   baseUrl: string,
@@ -203,6 +209,7 @@ export function buildChallengeUrl(
   color: ChallengeColor,
   timeMinutes: number,
   challengerNametag: string,
+  elo?: number,
 ): string {
   const url = new URL(baseUrl);
   url.searchParams.set('game', gameId);
@@ -210,6 +217,9 @@ export function buildChallengeUrl(
   url.searchParams.set('color', color);
   url.searchParams.set('time', String(timeMinutes));
   url.searchParams.set('from', challengerNametag.replace(/^@/, ''));
+  if (elo != null) {
+    url.searchParams.set('elo', String(elo));
+  }
   // Replace http(s):// with unicity-connect:// for Sphere deep link handling
   return url.toString().replace(/^https?:\/\//, 'unicity-connect://');
 }

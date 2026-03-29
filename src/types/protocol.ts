@@ -36,6 +36,8 @@ export interface ChallengeMessage {
   color: ChallengeColor;
   timeMinutes: number;
   gameUrl: string;
+  /** Optional ELO for bot opponents (ignored for human players) */
+  elo?: number;
 }
 
 export interface AcceptMessage {
