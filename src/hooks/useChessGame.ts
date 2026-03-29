@@ -309,7 +309,7 @@ export function useChessGame(
         gameId: s.gameId,
         san,
         clockMs,
-        turn: s.chess.turn(),
+        turn: testChess.turn(), // whose turn it is AFTER the move
       };
 
       // Check for terminal position after move
