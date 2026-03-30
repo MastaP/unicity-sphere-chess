@@ -94,6 +94,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
   // Use refs so heartbeat and message callbacks always see the latest game/messaging
   const gameRef = useRef<ReturnType<typeof useChessGame>>(null!);
   const messagingRef = useRef<ReturnType<typeof useGameMessages>>(null!);
+  const challengeResendRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const onPollSend = useCallback(
     (msg: ParsedMessage) => {
@@ -166,6 +167,10 @@ export function GameProvider({ connection, children }: GameProviderProps) {
       // Handle accept — transition to playing (only for the current game)
       if (msg.action === ACTION.ACCEPT) {
         if (g.state.gameId && msg.gameId === g.state.gameId) {
+          if (challengeResendRef.current) {
+            clearInterval(challengeResendRef.current);
+            challengeResendRef.current = null;
+          }
           g.setStatus('playing');
         }
         return;
@@ -187,6 +192,10 @@ export function GameProvider({ connection, children }: GameProviderProps) {
       // treat it as accept + move (handles missed 'ok' DMs)
       if (msg.action === ACTION.MOVE && g.state.gameId && msg.gameId === g.state.gameId
           && g.state.status !== 'playing' && g.state.status !== 'ended') {
+        if (challengeResendRef.current) {
+          clearInterval(challengeResendRef.current);
+          challengeResendRef.current = null;
+        }
         g.setStatus('playing');
       }
 
@@ -331,6 +340,23 @@ export function GameProvider({ connection, children }: GameProviderProps) {
       await messaging.sendMessage(opponent, msg);
       console.log('[GameContext] startChallenge: challenge sent, awaiting accept');
       game.setStatus('awaiting-accept');
+
+      // For bot challenges, resend every 5s until accepted or cancelled
+      if (elo != null) {
+        if (challengeResendRef.current) clearInterval(challengeResendRef.current);
+        challengeResendRef.current = setInterval(() => {
+          const g = gameRef.current;
+          if (!g || g.state.status !== 'awaiting-accept' || g.state.gameId !== gameId) {
+            if (challengeResendRef.current) {
+              clearInterval(challengeResendRef.current);
+              challengeResendRef.current = null;
+            }
+            return;
+          }
+          console.log('[GameContext] Resending bot challenge...');
+          messagingRef.current?.sendMessage(opponent, msg).catch(() => {});
+        }, 5000);
+      }
     },
 
     async offerRematch() {
@@ -459,6 +485,10 @@ export function GameProvider({ connection, children }: GameProviderProps) {
     },
 
     reset() {
+      if (challengeResendRef.current) {
+        clearInterval(challengeResendRef.current);
+        challengeResendRef.current = null;
+      }
       // If we're waiting for accept, notify opponent that we cancelled
       if (game.state.gameId && game.state.opponent?.nametag &&
           (game.state.status === 'awaiting-accept' || game.state.status === 'challenging')) {

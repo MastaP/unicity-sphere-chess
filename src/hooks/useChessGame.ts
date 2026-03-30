@@ -342,8 +342,21 @@ export function useChessGame(
       switch (msg.action) {
         case ACTION.MOVE: {
           if (s.status !== 'playing') return;
-          // Dedup by moveNum: ignore if already applied
-          if (msg.moveNum > 0 && msg.moveNum <= s.moveHistory.length) return;
+          // Dedup by moveNum: if already applied, opponent missed our reply — resend
+          if (msg.moveNum > 0 && msg.moveNum <= s.moveHistory.length) {
+            if (lastMoveRef.current && pollCallbackRef.current) {
+              const m = lastMoveRef.current;
+              pollCallbackRef.current({
+                action: ACTION.MOVE,
+                gameId: s.gameId,
+                san: m.san,
+                clockMs: Math.round(s.myClockMs),
+                color: m.color,
+                moveNum: m.moveNum,
+              });
+            }
+            return;
+          }
           // Reject moves claiming to be from our own color
           const myColorChar = s.myColor === 'white' ? 'w' : 'b';
           if (msg.color === myColorChar) return;
