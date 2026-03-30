@@ -36,6 +36,8 @@ export interface ChallengeMessage {
   color: ChallengeColor;
   timeMinutes: number;
   gameUrl: string;
+  /** Optional ELO for bot opponents (ignored for human players) */
+  elo?: number;
 }
 
 export interface AcceptMessage {
@@ -53,7 +55,9 @@ export interface MoveMessage {
   gameId: string;
   san: string;
   clockMs: number;
-  turn: 'w' | 'b';
+  /** Color of the player who made this move */
+  color: 'w' | 'b';
+  moveNum: number;
 }
 
 export interface ResignMessage {

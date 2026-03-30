@@ -16,14 +16,17 @@ export function encodeMessage(msg: ParsedMessage): string {
 
   switch (msg.action) {
     case ACTION.CHALLENGE:
-      // Challenge is sent as a clickable URL with protocol fields as query params
+      // Bot challenges use the unichess: protocol format; human challenges use the URL
+      if (msg.elo != null) {
+        return `${prefix}:${ACTION.CHALLENGE}:${msg.color}:${msg.timeMinutes}:${msg.elo}`;
+      }
       return msg.gameUrl;
     case ACTION.ACCEPT:
       return `${prefix}:${ACTION.ACCEPT}`;
     case ACTION.DECLINE:
       return `${prefix}:${ACTION.DECLINE}`;
     case ACTION.MOVE:
-      return `${prefix}:${ACTION.MOVE}:${msg.san}:${msg.clockMs}:${msg.turn}`;
+      return `${prefix}:${ACTION.MOVE}:${msg.san}:${msg.clockMs}:${msg.color}:${msg.moveNum}`;
     case ACTION.RESIGN:
       return `${prefix}:${ACTION.RESIGN}`;
     case ACTION.DRAW_OFFER:
@@ -81,6 +84,24 @@ export function parseMessage(raw: string): ParsedMessage | null {
   if (!action) return null;
 
   switch (action) {
+    case ACTION.CHALLENGE: {
+      // unichess:<gameId>:ch:<color>:<timeMinutes>[:<elo>]
+      if (parts.length < 5) return null;
+      const chColor = parts[3];
+      if (!chColor || !VALID_CHALLENGE_COLORS.has(chColor)) return null;
+      const chTime = parseInt(parts[4]!, 10);
+      if (isNaN(chTime) || chTime <= 0) return null;
+      const chElo = parts[5] ? parseInt(parts[5], 10) : undefined;
+      return {
+        action: ACTION.CHALLENGE,
+        gameId,
+        color: chColor as ChallengeColor,
+        timeMinutes: chTime,
+        gameUrl: raw,
+        ...(chElo != null && !isNaN(chElo) ? { elo: chElo } : {}),
+      };
+    }
+
     case ACTION.ACCEPT:
       return { action: ACTION.ACCEPT, gameId };
 
@@ -88,15 +109,16 @@ export function parseMessage(raw: string): ParsedMessage | null {
       return { action: ACTION.DECLINE, gameId };
 
     case ACTION.MOVE: {
-      if (parts.length < 6) return null;
+      if (parts.length < 7) return null;
       const san = parts[3];
       const clockStr = parts[4];
-      const turn = parts[5];
-      if (!san || !clockStr || !turn) return null;
-      if (turn !== 'w' && turn !== 'b') return null;
+      const color = parts[5];
+      const moveNum = parseInt(parts[6]!, 10);
+      if (!san || !clockStr || !color) return null;
+      if (color !== 'w' && color !== 'b') return null;
       const clockMs = parseInt(clockStr, 10);
-      if (isNaN(clockMs)) return null;
-      return { action: ACTION.MOVE, gameId, san, clockMs, turn };
+      if (isNaN(clockMs) || isNaN(moveNum)) return null;
+      return { action: ACTION.MOVE, gameId, san, clockMs, color, moveNum };
     }
 
     case ACTION.RESIGN:
@@ -180,12 +202,16 @@ function parseChallengeUrl(raw: string): ParsedMessage | null {
     const timeMinutes = parseInt(timeStr, 10);
     if (isNaN(timeMinutes)) return null;
 
+    const eloStr = url.searchParams.get('elo');
+    const elo = eloStr ? parseInt(eloStr, 10) : undefined;
+
     return {
       action: ACTION.CHALLENGE,
       gameId,
       color: color as ChallengeColor,
       timeMinutes,
       gameUrl: raw,
+      ...(elo != null && !isNaN(elo) ? { elo } : {}),
     };
   } catch {
     return null;
@@ -196,6 +222,8 @@ function parseChallengeUrl(raw: string): ParsedMessage | null {
  * Build a challenge URL with game params as query parameters.
  * Uses unicity-connect:// protocol for deep link support in Sphere DMs.
  * Sphere converts this back to http(s) when opening.
+ *
+ * @param elo - Optional ELO rating for bot opponents. Omitted for human players.
  */
 export function buildChallengeUrl(
   baseUrl: string,
@@ -203,6 +231,7 @@ export function buildChallengeUrl(
   color: ChallengeColor,
   timeMinutes: number,
   challengerNametag: string,
+  elo?: number,
 ): string {
   const url = new URL(baseUrl);
   url.searchParams.set('game', gameId);
@@ -210,6 +239,9 @@ export function buildChallengeUrl(
   url.searchParams.set('color', color);
   url.searchParams.set('time', String(timeMinutes));
   url.searchParams.set('from', challengerNametag.replace(/^@/, ''));
+  if (elo != null) {
+    url.searchParams.set('elo', String(elo));
+  }
   // Replace http(s):// with unicity-connect:// for Sphere deep link handling
   return url.toString().replace(/^https?:\/\//, 'unicity-connect://');
 }

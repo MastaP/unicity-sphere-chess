@@ -147,7 +147,7 @@ export interface UseChessGame {
 }
 
 export function useChessGame(
-  onSendHeartbeat?: (msg: ParsedMessage) => void,
+  onPollSend?: (msg: ParsedMessage) => void,
   onGameOverDetected?: (result: GameResult, msg: ParsedMessage) => void,
 ): UseChessGame {
   const [state, dispatch] = useReducer(gameReducer, undefined, createInitialState);
@@ -157,9 +157,10 @@ export function useChessGame(
 
   const clockRef = useRef<number | null>(null);
   const lastTickRef = useRef<number>(0);
-  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const heartbeatCallbackRef = useRef(onSendHeartbeat);
-  heartbeatCallbackRef.current = onSendHeartbeat;
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastMoveRef = useRef<{ san: string; color: 'w' | 'b'; moveNum: number } | null>(null);
+  const pollCallbackRef = useRef(onPollSend);
+  pollCallbackRef.current = onPollSend;
   const gameOverCallbackRef = useRef(onGameOverDetected);
   gameOverCallbackRef.current = onGameOverDetected;
 
@@ -230,35 +231,40 @@ export function useChessGame(
     };
   }, [state.status, isMyTurn]);
 
-  // Heartbeat interval: send when it's NOT my turn
+  // Poll interval: resend last move when waiting for opponent (replaces heartbeat)
   useEffect(() => {
     if (state.status !== 'playing') {
-      if (heartbeatRef.current) {
-        clearInterval(heartbeatRef.current);
-        heartbeatRef.current = null;
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
       }
       return;
     }
 
-    heartbeatRef.current = setInterval(() => {
+    pollRef.current = setInterval(() => {
       const s = stateRef.current;
       if (s.status !== 'playing') return;
 
       const myTurn = isMyTurn();
-      if (!myTurn && heartbeatCallbackRef.current) {
+      if (!myTurn && lastMoveRef.current && pollCallbackRef.current) {
+        // Resend last move with updated clock for accurate sync
+        const m = lastMoveRef.current;
         const msg: ParsedMessage = {
-          action: ACTION.HEARTBEAT,
+          action: ACTION.MOVE,
           gameId: s.gameId,
+          san: m.san,
           clockMs: Math.round(s.myClockMs),
+          color: m.color,
+          moveNum: m.moveNum,
         };
-        heartbeatCallbackRef.current(msg);
+        pollCallbackRef.current(msg);
       }
     }, HEARTBEAT_INTERVAL_MS);
 
     return () => {
-      if (heartbeatRef.current) {
-        clearInterval(heartbeatRef.current);
-        heartbeatRef.current = null;
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
       }
     };
   }, [state.status, isMyTurn]);
@@ -280,7 +286,9 @@ export function useChessGame(
   );
 
   const setStatus = useCallback((status: GameState['status']) => {
-    dispatch({ type: 'SET_STATUS', status });
+    const action = { type: 'SET_STATUS' as const, status };
+    dispatch(action);
+    stateRef.current = gameReducer(stateRef.current, action);
   }, []);
 
   const markDepositDone = useCallback((who: 'me' | 'opponent') => {
@@ -304,12 +312,16 @@ export function useChessGame(
       // React render already see the updated chess position.
       stateRef.current = gameReducer(stateRef.current, action);
 
+      const myColorChar = (s.myColor === 'white' ? 'w' : 'b') as 'w' | 'b';
+      const moveNum = stateRef.current.moveHistory.length;
+      lastMoveRef.current = { san, color: myColorChar, moveNum };
       const msg: ParsedMessage = {
         action: ACTION.MOVE,
         gameId: s.gameId,
         san,
         clockMs,
-        turn: s.chess.turn(),
+        color: myColorChar,
+        moveNum,
       };
 
       // Check for terminal position after move
@@ -330,10 +342,27 @@ export function useChessGame(
       switch (msg.action) {
         case ACTION.MOVE: {
           if (s.status !== 'playing') return;
+          // Dedup by moveNum: if already applied, opponent missed our reply — resend
+          if (msg.moveNum > 0 && msg.moveNum <= s.moveHistory.length) {
+            if (lastMoveRef.current && pollCallbackRef.current) {
+              const m = lastMoveRef.current;
+              pollCallbackRef.current({
+                action: ACTION.MOVE,
+                gameId: s.gameId,
+                san: m.san,
+                clockMs: Math.round(s.myClockMs),
+                color: m.color,
+                moveNum: m.moveNum,
+              });
+            }
+            return;
+          }
           // Reject moves claiming to be from our own color
-          const myTurnChar = s.myColor === 'white' ? 'w' : 'b';
-          if (msg.turn === myTurnChar) return;
+          const myColorChar = s.myColor === 'white' ? 'w' : 'b';
+          if (msg.color === myColorChar) return;
           if (isMyTurn()) return;
+          // Opponent responded — stop resending our last move
+          lastMoveRef.current = null;
 
           const testChess = new Chess(s.chess.fen());
           const moveResult = testChess.move(msg.san);
@@ -450,6 +479,7 @@ export function useChessGame(
   }, []);
 
   const reset = useCallback(() => {
+    lastMoveRef.current = null;
     dispatch({ type: 'RESET' });
   }, []);
 
