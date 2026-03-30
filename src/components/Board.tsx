@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { Chessboard } from 'react-chessboard';
+import type { PromotionPieceOption } from 'react-chessboard/dist/chessboard/types';
 import type { Chess } from 'chess.js';
 import type { PlayerColor, MoveRecord } from '../types/game.js';
 
@@ -17,7 +18,6 @@ export function Board({ chess, myColor, onMove, disabled, lastMove }: BoardProps
   // Compute last move highlight squares
   const lastMoveSquares = useMemo(() => {
     if (!lastMove) return {};
-    // We need to peek at the chess history to find from/to squares
     const history = chess.history({ verbose: true });
     if (history.length === 0) return {};
     const last = history[history.length - 1];
@@ -28,20 +28,33 @@ export function Board({ chess, myColor, onMove, disabled, lastMove }: BoardProps
     };
   }, [chess, lastMove]);
 
-  // Handle piece drop (drag and drop)
+  // Handle piece drop — for non-promotion moves
   const onDrop = useCallback(
     (sourceSquare: string, targetSquare: string, piece: string): boolean => {
       if (disabled) return false;
 
-      // Detect promotion
       const isPromotion =
         piece[1] === 'P' &&
         ((piece[0] === 'w' && targetSquare[1] === '8') ||
          (piece[0] === 'b' && targetSquare[1] === '1'));
 
-      return onMove(sourceSquare, targetSquare, isPromotion ? 'q' : undefined);
+      // Let the promotion dialog handle promotion moves
+      if (isPromotion) return true;
+
+      return onMove(sourceSquare, targetSquare);
     },
     [disabled, onMove],
+  );
+
+  // Handle promotion piece selection from the dialog
+  const onPromotionPieceSelect = useCallback(
+    (piece?: PromotionPieceOption, promoteFromSquare?: string, promoteToSquare?: string): boolean => {
+      if (!piece || !promoteFromSquare || !promoteToSquare) return false;
+      // piece is like "wQ", "wN" etc — extract the piece letter lowercase
+      const promotion = piece![1]!.toLowerCase();
+      return onMove(promoteFromSquare, promoteToSquare, promotion);
+    },
+    [onMove],
   );
 
   return (
@@ -50,6 +63,7 @@ export function Board({ chess, myColor, onMove, disabled, lastMove }: BoardProps
         id="game-board"
         position={chess.fen()}
         onPieceDrop={onDrop}
+        onPromotionPieceSelect={onPromotionPieceSelect}
         boardOrientation={boardOrientation}
         arePiecesDraggable={!disabled}
         customBoardStyle={{
