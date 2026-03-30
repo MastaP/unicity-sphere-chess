@@ -23,7 +23,7 @@ export const BOT_OPPONENTS: BotOpponent[] = [
     id: 'pavel',
     name: 'Pavel',
     nametag: CHESS_BOT_NAMETAG,
-    elo: 1300,
+    elo: 1320,
     avatar: 'avatars/chess_pavel.png',
     description: 'Intermediate',
   },
