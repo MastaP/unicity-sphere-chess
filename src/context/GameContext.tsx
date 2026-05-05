@@ -10,6 +10,12 @@ import type { ParsedMessage, ChallengeColor, GameOverReason } from '../types/pro
 import type { GameState, GameResult, PlayerColor, IncomingChallenge } from '../types/game.js';
 import type { ConnectClient } from '@unicitylabs/sphere-sdk/connect';
 import { GAME_ID_LENGTH } from '../constants.js';
+import { CHESS_BOT_NAMETAG } from '../lib/bot-opponents.js';
+
+function isBotNametag(nametag: string | undefined | null): boolean {
+  if (!nametag) return false;
+  return nametag.replace(/^@/, '') === CHESS_BOT_NAMETAG;
+}
 
 export interface GameContextValue {
   state: GameState;
@@ -234,7 +240,12 @@ export function GameProvider({ connection, children }: GameProviderProps) {
           (result.outcome === 'white-wins' && myColor === 'white') ||
           (result.outcome === 'black-wins' && myColor === 'black');
         if (iWon) {
-          wager.requestPayout(myNametag, 20);
+          // When the opponent is a chess bot, the bot pays the reward directly
+          // from its own wallet via a Sphere transfer — skip the faucet.
+          const opponentIsBot = isBotNametag(g?.state.opponent?.nametag);
+          if (!opponentIsBot) {
+            wager.requestPayout(myNametag, 20);
+          }
         }
         // Loser gets nothing — no payout needed
       }
