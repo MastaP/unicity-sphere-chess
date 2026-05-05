@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import type { GameResult, PlayerColor, IncomingChallenge } from '../types/game.js';
 import { ENTRY_FEE } from '../constants.js';
+import { rewardForElo } from '../lib/bot-opponents.js';
 
 interface GameOverOverlayProps {
   result: GameResult;
   myColor: PlayerColor;
+  /** ELO of the bot opponent (null for human-vs-human). Determines reward amount. */
+  botElo: number | null;
   onRematch: () => void;
   onNewGame: () => void;
   pgn: string;
@@ -13,7 +16,7 @@ interface GameOverOverlayProps {
   onDeclineChallenge?: () => void;
 }
 
-function getPayoutText(result: GameResult, myColor: PlayerColor): string {
+function getPayoutText(result: GameResult, myColor: PlayerColor, botElo: number | null): string {
   if (result.outcome === 'aborted') {
     return `${ENTRY_FEE} UCT returned`;
   }
@@ -23,7 +26,9 @@ function getPayoutText(result: GameResult, myColor: PlayerColor): string {
   const iWon =
     (result.outcome === 'white-wins' && myColor === 'white') ||
     (result.outcome === 'black-wins' && myColor === 'black');
-  return iWon ? `+${ENTRY_FEE * 2} UCT` : `${ENTRY_FEE} UCT lost`;
+  if (!iWon) return `${ENTRY_FEE} UCT lost`;
+  const winAmount = botElo != null ? rewardForElo(botElo) : ENTRY_FEE * 2;
+  return `+${winAmount} UCT`;
 }
 
 function getResultText(result: GameResult, myColor: PlayerColor): string {
@@ -54,6 +59,7 @@ function getReasonText(result: GameResult): string {
 export function GameOverOverlay({
   result,
   myColor,
+  botElo,
   onRematch,
   onNewGame,
   pgn,
@@ -107,7 +113,7 @@ export function GameOverOverlay({
           iWon ? 'text-green-300' : isDraw ? 'text-neutral-300' : 'text-red-300'
         }`}
       >
-        {getPayoutText(result, myColor)}
+        {getPayoutText(result, myColor, botElo)}
       </p>
 
       {/* Incoming rematch offer */}

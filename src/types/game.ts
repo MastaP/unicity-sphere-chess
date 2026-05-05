@@ -46,6 +46,8 @@ export interface GameState {
   lastHeartbeatAt: number;
   myDepositDone: boolean;
   opponentDepositDone: boolean;
+  /** ELO of the bot opponent — null for human-vs-human games. */
+  botElo: number | null;
 }
 
 export interface IncomingChallenge {

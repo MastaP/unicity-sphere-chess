@@ -10,6 +10,21 @@ export interface BotOpponent {
   description: string;
 }
 
+/**
+ * Reward (in whole UCT) the bot pays when the player beats it. Tiered by ELO:
+ *   ELO < 1000          → 20 UCT
+ *   1000 ≤ ELO ≤ 2000   → 25 UCT
+ *   ELO > 2000          → 30 UCT
+ *
+ * Must match `rewardForElo` in agentic-chatbot/packages/chess-bot/src/rewards.ts.
+ */
+export function rewardForElo(elo: number): number {
+  if (!Number.isFinite(elo)) return 20;
+  if (elo < 1000) return 20;
+  if (elo <= 2000) return 25;
+  return 30;
+}
+
 export const BOT_OPPONENTS: BotOpponent[] = [
   {
     id: 'timo',

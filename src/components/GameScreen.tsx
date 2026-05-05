@@ -177,6 +177,7 @@ export function GameScreen({ connection }: GameScreenProps) {
               <GameOverOverlay
                 result={state.result}
                 myColor={state.myColor}
+                botElo={state.botElo}
                 onRematch={offerRematch}
                 onNewGame={reset}
                 pgn={state.chess.pgn()}

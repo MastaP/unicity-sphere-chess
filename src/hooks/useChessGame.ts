@@ -8,7 +8,7 @@ import { HEARTBEAT_INTERVAL_MS } from '../constants';
 import { correctedNow } from '../lib/ntp';
 
 type GameAction =
-  | { type: 'INIT_CHALLENGE'; gameId: string; myColor: PlayerColor; timeMinutes: 3 | 5 | 10; opponentNametag: string; opponentPubkey: string }
+  | { type: 'INIT_CHALLENGE'; gameId: string; myColor: PlayerColor; timeMinutes: 3 | 5 | 10; opponentNametag: string; opponentPubkey: string; botElo: number | null }
   | { type: 'SET_STATUS'; status: GameState['status'] }
   | { type: 'DEPOSIT_DONE'; who: 'me' | 'opponent' }
   | { type: 'APPLY_MOVE'; san: string; clockMs: number; isMyMove: boolean }
@@ -35,6 +35,7 @@ function createInitialState(): GameState {
     lastHeartbeatAt: 0,
     myDepositDone: false,
     opponentDepositDone: false,
+    botElo: null,
   };
 }
 
@@ -51,6 +52,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         myClockMs: timeMs,
         opponentClockMs: timeMs,
         opponent: { nametag: action.opponentNametag, pubkey: action.opponentPubkey },
+        botElo: action.botElo,
       };
     }
 
@@ -132,6 +134,7 @@ export interface UseChessGame {
     timeMinutes: 3 | 5 | 10;
     opponentNametag: string;
     opponentPubkey: string;
+    botElo: number | null;
   }) => void;
   setStatus: (status: GameState['status']) => void;
   markDepositDone: (who: 'me' | 'opponent') => void;
@@ -276,6 +279,7 @@ export function useChessGame(
       timeMinutes: 3 | 5 | 10;
       opponentNametag: string;
       opponentPubkey: string;
+      botElo: number | null;
     }) => {
       dispatch({
         type: 'INIT_CHALLENGE',

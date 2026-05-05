@@ -10,12 +10,6 @@ import type { ParsedMessage, ChallengeColor, GameOverReason } from '../types/pro
 import type { GameState, GameResult, PlayerColor, IncomingChallenge } from '../types/game.js';
 import type { ConnectClient } from '@unicitylabs/sphere-sdk/connect';
 import { GAME_ID_LENGTH } from '../constants.js';
-import { CHESS_BOT_NAMETAG } from '../lib/bot-opponents.js';
-
-function isBotNametag(nametag: string | undefined | null): boolean {
-  if (!nametag) return false;
-  return nametag.replace(/^@/, '') === CHESS_BOT_NAMETAG;
-}
 
 export interface GameContextValue {
   state: GameState;
@@ -242,8 +236,8 @@ export function GameProvider({ connection, children }: GameProviderProps) {
         if (iWon) {
           // When the opponent is a chess bot, the bot pays the reward directly
           // from its own wallet via a Sphere transfer — skip the faucet.
-          const opponentIsBot = isBotNametag(g?.state.opponent?.nametag);
-          if (!opponentIsBot) {
+          const botElo = g?.state.botElo ?? null;
+          if (botElo == null) {
             wager.requestPayout(myNametag, 20);
           }
         }
@@ -321,6 +315,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
         timeMinutes,
         opponentNametag: opponent,
         opponentPubkey,
+        botElo: elo ?? null,
       });
 
       console.log('[GameContext] startChallenge: depositing...');
@@ -397,13 +392,14 @@ export function GameProvider({ connection, children }: GameProviderProps) {
       };
       await messaging.sendMessage(opponent.nametag, msg);
 
-      // Init the new game locally and wait for accept
+      // Init the new game locally and wait for accept (preserve bot ELO across rematches)
       game.initChallenge({
         gameId: newGameId,
         myColor: swappedColor,
         timeMinutes: timeMinutes as 3 | 5 | 10,
         opponentNametag: opponent.nametag,
         opponentPubkey: opponent.pubkey,
+        botElo: game.state.botElo,
       });
       game.markDepositDone('me');
       game.setStatus('awaiting-accept');
@@ -422,6 +418,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
         timeMinutes: challenge.timeMinutes,
         opponentNametag: challenge.nametag,
         opponentPubkey: challenge._senderPubkey ?? '',
+        botElo: null,
       });
 
       const depositOk = await wager.deposit(challenge.gameId);
