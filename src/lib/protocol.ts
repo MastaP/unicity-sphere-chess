@@ -25,8 +25,10 @@ export function encodeMessage(msg: ParsedMessage): string {
       return `${prefix}:${ACTION.ACCEPT}`;
     case ACTION.DECLINE:
       return `${prefix}:${ACTION.DECLINE}`;
-    case ACTION.MOVE:
-      return `${prefix}:${ACTION.MOVE}:${msg.san}:${msg.clockMs}:${msg.color}:${msg.moveNum}`;
+    case ACTION.MOVE: {
+      const base = `${prefix}:${ACTION.MOVE}:${msg.san}:${msg.clockMs}:${msg.color}:${msg.moveNum}`;
+      return msg.sentAtMs != null ? `${base}:${msg.sentAtMs}` : base;
+    }
     case ACTION.RESIGN:
       return `${prefix}:${ACTION.RESIGN}`;
     case ACTION.DRAW_OFFER:
@@ -118,7 +120,17 @@ export function parseMessage(raw: string): ParsedMessage | null {
       if (color !== 'w' && color !== 'b') return null;
       const clockMs = parseInt(clockStr, 10);
       if (isNaN(clockMs) || isNaN(moveNum)) return null;
-      return { action: ACTION.MOVE, gameId, san, clockMs, color, moveNum };
+      const sentAtStr = parts[7];
+      const sentAtMs = sentAtStr ? parseInt(sentAtStr, 10) : NaN;
+      return {
+        action: ACTION.MOVE,
+        gameId,
+        san,
+        clockMs,
+        color,
+        moveNum,
+        ...(isNaN(sentAtMs) ? {} : { sentAtMs }),
+      };
     }
 
     case ACTION.RESIGN:

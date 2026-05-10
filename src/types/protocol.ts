@@ -58,6 +58,13 @@ export interface MoveMessage {
   /** Color of the player who made this move */
   color: 'w' | 'b';
   moveNum: number;
+  /**
+   * Optional Unix-epoch ms timestamp set by the sender when transmitting.
+   * Receivers subtract (now - sentAtMs) from clockMs to compensate for
+   * Nostr DM transit delay when displaying the opponent's clock. Absent
+   * on messages from older clients — in that case fall back to raw clockMs.
+   */
+  sentAtMs?: number;
 }
 
 export interface ResignMessage {

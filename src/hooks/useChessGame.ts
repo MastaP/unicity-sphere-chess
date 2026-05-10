@@ -7,6 +7,42 @@ import { isGameTerminal } from '../lib/chess-helpers';
 import { HEARTBEAT_INTERVAL_MS } from '../constants';
 import { correctedNow } from '../lib/ntp';
 
+/**
+ * Compensate the opponent's reported clock for Nostr DM transit delay.
+ * If the sender stamped `sentAtMs`, subtract elapsed time so the display
+ * reflects the opponent's actual remaining time *now* rather than the
+ * stale value baked into a delayed message. Clamped to [0, 60s] to
+ * survive bad clock skew or long-queued messages.
+ */
+function applyTransitCorrection(clockMs: number, sentAtMs: number | undefined): number {
+  if (sentAtMs == null) return clockMs;
+  const elapsed = Math.max(0, Math.min(60_000, correctedNow() - sentAtMs));
+  return Math.max(0, clockMs - elapsed);
+}
+
+/**
+ * Build an outgoing MOVE message. Centralizes `sentAtMs` stamping so every
+ * send site (initial, poll resend, dedup resend) carries the transit-delay
+ * timestamp — receivers use it to display an accurate sender clock.
+ */
+function buildMoveMsg(
+  gameId: string,
+  san: string,
+  color: 'w' | 'b',
+  moveNum: number,
+  clockMs: number,
+): ParsedMessage {
+  return {
+    action: ACTION.MOVE,
+    gameId,
+    san,
+    clockMs,
+    color,
+    moveNum,
+    sentAtMs: correctedNow(),
+  };
+}
+
 type GameAction =
   | { type: 'INIT_CHALLENGE'; gameId: string; myColor: PlayerColor; timeMinutes: 3 | 5 | 10; opponentNametag: string; opponentPubkey: string; botElo: number | null }
   | { type: 'SET_STATUS'; status: GameState['status'] }
@@ -252,15 +288,9 @@ export function useChessGame(
       if (!myTurn && lastMoveRef.current && pollCallbackRef.current) {
         // Resend last move with updated clock for accurate sync
         const m = lastMoveRef.current;
-        const msg: ParsedMessage = {
-          action: ACTION.MOVE,
-          gameId: s.gameId,
-          san: m.san,
-          clockMs: Math.round(s.myClockMs),
-          color: m.color,
-          moveNum: m.moveNum,
-        };
-        pollCallbackRef.current(msg);
+        pollCallbackRef.current(
+          buildMoveMsg(s.gameId, m.san, m.color, m.moveNum, Math.round(s.myClockMs)),
+        );
       }
     }, HEARTBEAT_INTERVAL_MS);
 
@@ -319,14 +349,7 @@ export function useChessGame(
       const myColorChar = (s.myColor === 'white' ? 'w' : 'b') as 'w' | 'b';
       const moveNum = stateRef.current.moveHistory.length;
       lastMoveRef.current = { san, color: myColorChar, moveNum };
-      const msg: ParsedMessage = {
-        action: ACTION.MOVE,
-        gameId: s.gameId,
-        san,
-        clockMs,
-        color: myColorChar,
-        moveNum,
-      };
+      const msg = buildMoveMsg(s.gameId, san, myColorChar, moveNum, clockMs);
 
       // Check for terminal position after move
       const terminal = isGameTerminal(testChess);
@@ -350,14 +373,9 @@ export function useChessGame(
           if (msg.moveNum > 0 && msg.moveNum <= s.moveHistory.length) {
             if (lastMoveRef.current && pollCallbackRef.current) {
               const m = lastMoveRef.current;
-              pollCallbackRef.current({
-                action: ACTION.MOVE,
-                gameId: s.gameId,
-                san: m.san,
-                clockMs: Math.round(s.myClockMs),
-                color: m.color,
-                moveNum: m.moveNum,
-              });
+              pollCallbackRef.current(
+                buildMoveMsg(s.gameId, m.san, m.color, m.moveNum, Math.round(s.myClockMs)),
+              );
             }
             return;
           }
@@ -375,7 +393,7 @@ export function useChessGame(
           const action: GameAction = {
             type: 'APPLY_MOVE',
             san: msg.san,
-            clockMs: msg.clockMs,
+            clockMs: applyTransitCorrection(msg.clockMs, msg.sentAtMs),
             isMyMove: false,
           };
           dispatch(action);
