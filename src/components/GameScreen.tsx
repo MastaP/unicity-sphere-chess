@@ -30,6 +30,8 @@ export function GameScreen({ connection }: GameScreenProps) {
     declineChallenge,
     incomingChallenge,
     reset,
+    notice,
+    clearNotice,
   } = useGame();
 
   const myNametag = connection.identity?.nametag ?? 'You';
@@ -58,6 +60,19 @@ export function GameScreen({ connection }: GameScreenProps) {
           <h1 className="text-2xl font-bold text-white">Unicity Chess</h1>
           <p className="text-neutral-400 text-sm mt-1">Playing as {myNametag}</p>
         </div>
+
+        {notice && (
+          <div className="w-full max-w-sm bg-orange-500/10 border border-orange-500/40 rounded-xl px-4 py-3 text-sm text-orange-200 flex items-start gap-3">
+            <span className="flex-1">{notice}</span>
+            <button
+              onClick={clearNotice}
+              className="text-orange-300 hover:text-orange-100 text-lg leading-none cursor-pointer"
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {incomingChallenge && (
           <IncomingChallenge

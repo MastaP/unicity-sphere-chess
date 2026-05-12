@@ -291,6 +291,16 @@ export function useChessGame(
         pollCallbackRef.current(
           buildMoveMsg(s.gameId, m.san, m.color, m.moveNum, Math.round(s.myClockMs)),
         );
+      } else if (myTurn && pollCallbackRef.current) {
+        // Heartbeat so the opponent (esp. the bot) knows we're still alive
+        // while we're thinking. Without this, the bot can't distinguish a
+        // deep think from a disconnect and has to wait for our clock to
+        // run out before evicting the game.
+        pollCallbackRef.current({
+          action: ACTION.HEARTBEAT,
+          gameId: s.gameId,
+          clockMs: Math.round(s.myClockMs),
+        });
       }
     }, HEARTBEAT_INTERVAL_MS);
 

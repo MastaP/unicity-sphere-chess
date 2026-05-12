@@ -31,6 +31,8 @@ export interface GameContextValue {
   declineChallenge: () => void;
   incomingChallenge: IncomingChallenge | null;
   reset: () => void;
+  notice: string | null;
+  clearNotice: () => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -90,6 +92,9 @@ export function GameProvider({ connection, children }: GameProviderProps) {
   });
 
   const wager = useWager(connection.client);
+
+  const [notice, setNotice] = useState<string | null>(null);
+  const clearNotice = useCallback(() => setNotice(null), []);
 
   // Use refs so heartbeat and message callbacks always see the latest game/messaging
   const gameRef = useRef<ReturnType<typeof useChessGame>>(null!);
@@ -183,6 +188,10 @@ export function GameProvider({ connection, children }: GameProviderProps) {
           if (connection.identity?.nametag) {
             wager.requestPayout(connection.identity.nametag, 10);
           }
+          const opponentLabel = g.state.opponent?.nametag ?? 'opponent';
+          setNotice(
+            `${opponentLabel} declined the challenge. Your ${10} UCT deposit was refunded.`,
+          );
           g.reset();
         }
         return;
@@ -260,6 +269,8 @@ export function GameProvider({ connection, children }: GameProviderProps) {
   const value: GameContextValue = {
     state: game.state,
     incomingChallenge,
+    notice,
+    clearNotice,
 
     makeMove(from: string, to: string, promotion?: string) {
       // Convert from/to into SAN using chess.js
