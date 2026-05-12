@@ -11,6 +11,13 @@ export const ACTION = {
   ABORT: 'ab',
   GAMEOVER: 'go',
   REMATCH: 'rm',
+  /**
+   * Liveness probe sent before requesting a deposit. The bot replies PONG
+   * if it can accept a new game, DECLINE if at capacity, or nothing if
+   * offline. 15s timeout on the UI side avoids depositing into a dead bot.
+   */
+  PING: 'pi',
+  PONG: 'po',
 } as const;
 
 export type ActionCode = (typeof ACTION)[keyof typeof ACTION];
@@ -113,6 +120,16 @@ export interface RematchMessage {
   timeMinutes: number;
 }
 
+export interface PingMessage {
+  action: typeof ACTION.PING;
+  gameId: string;
+}
+
+export interface PongMessage {
+  action: typeof ACTION.PONG;
+  gameId: string;
+}
+
 export type ParsedMessage =
   | ChallengeMessage
   | AcceptMessage
@@ -125,4 +142,6 @@ export type ParsedMessage =
   | HeartbeatMessage
   | AbortMessage
   | GameOverMessage
-  | RematchMessage;
+  | RematchMessage
+  | PingMessage
+  | PongMessage;

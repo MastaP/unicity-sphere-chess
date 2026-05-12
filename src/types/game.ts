@@ -2,6 +2,7 @@ import type { Chess } from 'chess.js';
 
 export type GameStatus =
   | 'idle'
+  | 'pinging'
   | 'depositing'
   | 'challenging'
   | 'awaiting-accept'

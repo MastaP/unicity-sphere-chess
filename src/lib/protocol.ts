@@ -45,6 +45,10 @@ export function encodeMessage(msg: ParsedMessage): string {
       return `${prefix}:${ACTION.GAMEOVER}:${msg.result}:${msg.reason}`;
     case ACTION.REMATCH:
       return `${prefix}:${ACTION.REMATCH}:${msg.newGameId}:${msg.color}:${msg.timeMinutes}`;
+    case ACTION.PING:
+      return `${prefix}:${ACTION.PING}`;
+    case ACTION.PONG:
+      return `${prefix}:${ACTION.PONG}`;
   }
 }
 
@@ -190,6 +194,12 @@ export function parseMessage(raw: string): ParsedMessage | null {
         timeMinutes: rmTime,
       };
     }
+
+    case ACTION.PING:
+      return { action: ACTION.PING, gameId };
+
+    case ACTION.PONG:
+      return { action: ACTION.PONG, gameId };
 
     default:
       return null;

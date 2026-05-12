@@ -101,6 +101,18 @@ export function GameProvider({ connection, children }: GameProviderProps) {
   const messagingRef = useRef<ReturnType<typeof useGameMessages>>(null!);
   const challengeResendRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  /**
+   * In-flight bot liveness probe. We send PING, wait up to 15s for PONG or
+   * DECLINE, and either proceed with the deposit (PONG) or abort (DECLINE
+   * / timeout). Kept in a ref so the message dispatch callback can resolve
+   * it without re-rendering the provider.
+   */
+  const pendingPingRef = useRef<{
+    gameId: string;
+    resolve: (result: 'pong' | 'decline' | 'timeout') => void;
+    timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
+
   const onPollSend = useCallback(
     (msg: ParsedMessage) => {
       const g = gameRef.current;
@@ -169,6 +181,17 @@ export function GameProvider({ connection, children }: GameProviderProps) {
         return;
       }
 
+      // PONG for an in-flight liveness probe — bot is alive and has a slot.
+      if (msg.action === ACTION.PONG) {
+        const pending = pendingPingRef.current;
+        if (pending && pending.gameId === msg.gameId) {
+          clearTimeout(pending.timer);
+          pendingPingRef.current = null;
+          pending.resolve('pong');
+        }
+        return;
+      }
+
       // Handle accept — transition to playing (only for the current game)
       if (msg.action === ACTION.ACCEPT) {
         if (g.state.gameId && msg.gameId === g.state.gameId) {
@@ -181,10 +204,21 @@ export function GameProvider({ connection, children }: GameProviderProps) {
         return;
       }
 
-      // Handle decline (only for the current game)
+      // Handle decline. Two cases:
+      //  - Decline arriving during an in-flight PING: bot is at capacity.
+      //    Resolve the ping with 'decline' so startChallenge skips the
+      //    deposit and shows a notice. No refund needed (we never paid).
+      //  - Decline for our current game: bot/peer rejected our (already-
+      //    deposited) challenge; refund and reset.
       if (msg.action === ACTION.DECLINE) {
+        const pending = pendingPingRef.current;
+        if (pending && pending.gameId === msg.gameId) {
+          clearTimeout(pending.timer);
+          pendingPingRef.current = null;
+          pending.resolve('decline');
+          return;
+        }
         if (g.state.gameId && msg.gameId === g.state.gameId) {
-          // Refund deposit
           if (connection.identity?.nametag) {
             wager.requestPayout(connection.identity.nametag, 10);
           }
@@ -329,7 +363,47 @@ export function GameProvider({ connection, children }: GameProviderProps) {
         botElo: elo ?? null,
       });
 
+      // Bot opponents: liveness probe BEFORE the deposit. A bot stuck in
+      // historical-replay or at capacity would otherwise eat the user's
+      // deposit and freeze on "Waiting for @...". Skip for human players —
+      // they don't auto-pong.
+      if (elo != null) {
+        game.setStatus('pinging');
+        const pingMsg: ParsedMessage = { action: ACTION.PING, gameId };
+        try {
+          await messaging.sendMessage(opponent, pingMsg);
+        } catch (err) {
+          console.error('[GameContext] PING send failed', err);
+          game.reset();
+          setNotice(`Could not reach ${opponent} (network error). Try again.`);
+          return;
+        }
+        const probeResult = await new Promise<'pong' | 'decline' | 'timeout'>((resolve) => {
+          const timer = setTimeout(() => {
+            if (pendingPingRef.current?.gameId === gameId) {
+              pendingPingRef.current = null;
+              resolve('timeout');
+            }
+          }, 15_000);
+          pendingPingRef.current = { gameId, resolve, timer };
+        });
+        if (probeResult !== 'pong') {
+          game.reset();
+          if (probeResult === 'decline') {
+            setNotice(
+              `${opponent} is at capacity right now. Try again in a minute — no deposit was made.`,
+            );
+          } else {
+            setNotice(
+              `${opponent} did not respond within 15s. Try again later — no deposit was made.`,
+            );
+          }
+          return;
+        }
+      }
+
       console.log('[GameContext] startChallenge: depositing...');
+      game.setStatus('depositing');
       const depositOk = await wager.deposit(gameId);
       console.log('[GameContext] startChallenge: deposit result =', depositOk);
       if (!depositOk) {

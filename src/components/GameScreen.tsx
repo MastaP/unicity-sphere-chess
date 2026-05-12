@@ -50,6 +50,7 @@ export function GameScreen({ connection }: GameScreenProps) {
   // Lobby / idle state
   if (
     state.status === 'idle' ||
+    state.status === 'pinging' ||
     state.status === 'depositing' ||
     state.status === 'challenging' ||
     state.status === 'awaiting-accept'

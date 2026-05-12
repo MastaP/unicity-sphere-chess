@@ -24,7 +24,11 @@ export function ChallengeDialog({ onChallenge, status, opponent, onCancel }: Cha
   const [countdown, setCountdown] = useState(0);
   const challengeSentAt = useRef<number>(0);
 
-  const isWaiting = status === 'depositing' || status === 'challenging' || status === 'awaiting-accept';
+  const isWaiting =
+    status === 'pinging' ||
+    status === 'depositing' ||
+    status === 'challenging' ||
+    status === 'awaiting-accept';
 
   // Countdown timer when waiting for acceptance
   useEffect(() => {
@@ -96,6 +100,16 @@ export function ChallengeDialog({ onChallenge, status, opponent, onCancel }: Cha
           <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto" />
         </div>
 
+        {status === 'pinging' && (
+          <>
+            <p className="text-neutral-300">
+              Checking {opponent ?? 'opponent'} is online...
+            </p>
+            <p className="text-neutral-500 text-sm mt-1">
+              No deposit until they respond
+            </p>
+          </>
+        )}
         {status === 'depositing' && (
           <p className="text-neutral-300">Depositing {ENTRY_FEE} UCT...</p>
         )}
