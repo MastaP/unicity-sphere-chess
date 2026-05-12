@@ -102,15 +102,18 @@ export function GameProvider({ connection, children }: GameProviderProps) {
   const challengeResendRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /**
-   * In-flight bot liveness probe. We send PING, wait up to 15s for PONG or
-   * DECLINE, and either proceed with the deposit (PONG) or abort (DECLINE
-   * / timeout). Kept in a ref so the message dispatch callback can resolve
-   * it without re-rendering the provider.
+   * In-flight bot liveness probe. We send PING (with retries every 3s),
+   * wait up to 15s for PONG or DECLINE, and either proceed with the
+   * deposit (PONG) or abort (DECLINE / timeout). Kept in a ref so the
+   * message dispatch callback can resolve it without re-rendering the
+   * provider. The retry interval is stored here too so we can stop
+   * re-sending as soon as the bot replies.
    */
   const pendingPingRef = useRef<{
     gameId: string;
     resolve: (result: 'pong' | 'decline' | 'timeout') => void;
     timer: ReturnType<typeof setTimeout>;
+    retryInterval: ReturnType<typeof setInterval>;
   } | null>(null);
 
   const onPollSend = useCallback(
@@ -186,6 +189,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
         const pending = pendingPingRef.current;
         if (pending && pending.gameId === msg.gameId) {
           clearTimeout(pending.timer);
+          clearInterval(pending.retryInterval);
           pendingPingRef.current = null;
           pending.resolve('pong');
         }
@@ -214,6 +218,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
         const pending = pendingPingRef.current;
         if (pending && pending.gameId === msg.gameId) {
           clearTimeout(pending.timer);
+          clearInterval(pending.retryInterval);
           pendingPingRef.current = null;
           pending.resolve('decline');
           return;
@@ -379,13 +384,24 @@ export function GameProvider({ connection, children }: GameProviderProps) {
           return;
         }
         const probeResult = await new Promise<'pong' | 'decline' | 'timeout'>((resolve) => {
+          // Retry every 3s — Nostr DMs are lossy (~50% drop rate observed
+          // from NIP-17 timestamp randomization alone) so a single send
+          // can easily go missing against a healthy bot. handlePing is
+          // idempotent, so duplicate pings just produce duplicate pongs.
+          // The first PONG/DECLINE that arrives clears both timers.
+          const retryInterval = setInterval(() => {
+            messaging.sendMessage(opponent, pingMsg).catch(() => {
+              /* retry failure is fine — keep trying */
+            });
+          }, 3_000);
           const timer = setTimeout(() => {
             if (pendingPingRef.current?.gameId === gameId) {
+              clearInterval(pendingPingRef.current.retryInterval);
               pendingPingRef.current = null;
               resolve('timeout');
             }
           }, 15_000);
-          pendingPingRef.current = { gameId, resolve, timer };
+          pendingPingRef.current = { gameId, resolve, timer, retryInterval };
         });
         if (probeResult !== 'pong') {
           game.reset();
