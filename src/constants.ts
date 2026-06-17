@@ -1,8 +1,10 @@
 export const ESCROW_NAMETAG = '@unichess';
 export const ENTRY_FEE = 10;
 export const COIN_SYMBOL = 'UCT';
+// testnet2 UCT coinId (unicity-ids.testnet2.json). Fallback only — the live
+// value normally comes from the wallet via sphere_getBalance.
 export const UCT_COIN_ID_FALLBACK =
-  '455ad8720656b08e8dbd5bac1f3c73eeea5431565f6c1c3af742b1aa12d41d89';
+  'f581d30f593e4b369d684a4563b5246f07b1d265f7178a2c0a82b81f39c24dc0';
 
 export const FAUCET_URL =
   'https://faucet.unicity.network/api/v1/faucet/request';
