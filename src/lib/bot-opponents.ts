@@ -1,5 +1,11 @@
-/** Nametag of the chess bot service that handles all bot opponents */
-export const CHESS_BOT_NAMETAG = 'chess-bot';
+/**
+ * Nametag of the chess bot service that handles all bot opponents.
+ * Defaults to the production bot; override locally via the
+ * `VITE_CHESS_BOT_NAMETAG` env var (e.g. in `.env.local`) to point at a
+ * test bot without editing source.
+ */
+export const CHESS_BOT_NAMETAG =
+  import.meta.env.VITE_CHESS_BOT_NAMETAG ?? 'chess-bot';
 
 export interface BotOpponent {
   id: string;

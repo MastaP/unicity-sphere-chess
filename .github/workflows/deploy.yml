@@ -27,6 +27,12 @@ jobs:
 
       - run: npm ci
       - run: npm run build
+        env:
+          # Optional override of the chess bot nametag. Set a repository
+          # variable `VITE_CHESS_BOT_NAMETAG` (Settings → Secrets and
+          # variables → Actions → Variables) to point the deployed build at
+          # a different bot; falls back to production `chess-bot` when unset.
+          VITE_CHESS_BOT_NAMETAG: ${{ vars.VITE_CHESS_BOT_NAMETAG || 'chess-bot' }}
 
       - uses: actions/upload-pages-artifact@v3
         with:
