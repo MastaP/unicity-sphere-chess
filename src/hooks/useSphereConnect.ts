@@ -25,6 +25,9 @@ const PERMISSIONS: PermissionScope[] = [
   'dm:read',
   'dm:request',
   'transfer:request',
+  // testnet2 has no faucet — rewards/refunds are self-minted into the user's
+  // own wallet via a MINT intent, so request mint permission up front.
+  'mint:request',
   'events:subscribe',
 ];
 

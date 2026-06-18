@@ -6,7 +6,6 @@ import {
   ENTRY_FEE,
   COIN_SYMBOL,
   UCT_COIN_ID_FALLBACK,
-  FAUCET_URL,
 } from '../constants';
 
 export interface UseWager {
@@ -66,34 +65,35 @@ export function useWager(client: ConnectClient | null): UseWager {
     [client, resolveUctCoinId],
   );
 
+  // testnet2 has no faucet. Rewards (20 UCT to a winner) and refunds (10 UCT on
+  // draw/abort/decline) are self-minted into the *connected* wallet via a MINT
+  // intent — the wallet prompts the user to approve, then mints test UCT to
+  // itself. `nametag` is the current user's own tag (each client pays only
+  // itself); it's carried in the memo for traceability, not used for routing.
   const requestPayout = useCallback(
     async (nametag: string, amount: number): Promise<boolean> => {
+      if (!client) return false;
       if (amount <= 0) return false;
 
       const unicityId = nametag.replace(/^@/, '');
       if (!unicityId) return false;
 
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          const response = await fetch(FAUCET_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              unicityId,
-              coin: 'unicity',
-              amount,
-            }),
-          });
-
-          if (response.ok) return true;
-        } catch {
-          // retry once
-        }
+      try {
+        const coinId = await resolveUctCoinId();
+        console.log('[useWager] payout: minting reward', { amount, coinId, for: unicityId });
+        const result = await client.intent(INTENT_ACTIONS.MINT, {
+          amount,
+          coinId,
+          memo: `unichess-reward:${unicityId}`,
+        });
+        console.log('[useWager] payout: success', result);
+        return true;
+      } catch (err) {
+        console.error('[useWager] payout: failed', err);
+        return false;
       }
-
-      return false;
     },
-    [],
+    [client, resolveUctCoinId],
   );
 
   const getBalance = useCallback(async (): Promise<number> => {
