@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import type { ConnectClient } from '@unicitylabs/sphere-sdk/connect';
 import { INTENT_ACTIONS } from '@unicitylabs/sphere-sdk/connect';
 import {
@@ -6,21 +6,28 @@ import {
   ENTRY_FEE,
   COIN_SYMBOL,
   UCT_COIN_ID_FALLBACK,
+  UCT_DECIMALS,
 } from '../constants';
 
 export interface UseWager {
   deposit: (gameId: string) => Promise<boolean>;
-  requestPayout: (nametag: string, amount: number) => Promise<boolean>;
+  requestPayout: (amount: number) => Promise<boolean>;
   getBalance: () => Promise<number>;
   uctCoinId: string | null;
 }
 
+/** Whole-UCT display amount → base-unit string (the unit the MINT intent expects). */
+function toBaseUnits(amount: number, decimals: number): string {
+  return (BigInt(Math.round(amount)) * 10n ** BigInt(decimals)).toString();
+}
+
 export function useWager(client: ConnectClient | null): UseWager {
   const [uctCoinId, setUctCoinId] = useState<string | null>(null);
+  const uctDecimalsRef = useRef<number>(UCT_DECIMALS);
 
-  const resolveUctCoinId = useCallback(async (): Promise<string> => {
-    if (uctCoinId) return uctCoinId;
-    if (!client) return UCT_COIN_ID_FALLBACK;
+  const resolveUctAsset = useCallback(async (): Promise<{ coinId: string; decimals: number }> => {
+    if (uctCoinId) return { coinId: uctCoinId, decimals: uctDecimalsRef.current };
+    if (!client) return { coinId: UCT_COIN_ID_FALLBACK, decimals: UCT_DECIMALS };
 
     try {
       const assets = await client.query<
@@ -30,8 +37,10 @@ export function useWager(client: ConnectClient | null): UseWager {
       if (Array.isArray(assets)) {
         const uct = assets.find((a) => a.symbol === COIN_SYMBOL);
         if (uct?.coinId) {
+          const decimals = uct.decimals || UCT_DECIMALS;
           setUctCoinId(uct.coinId);
-          return uct.coinId;
+          uctDecimalsRef.current = decimals;
+          return { coinId: uct.coinId, decimals };
         }
       }
     } catch {
@@ -39,7 +48,7 @@ export function useWager(client: ConnectClient | null): UseWager {
     }
 
     setUctCoinId(UCT_COIN_ID_FALLBACK);
-    return UCT_COIN_ID_FALLBACK;
+    return { coinId: UCT_COIN_ID_FALLBACK, decimals: UCT_DECIMALS };
   }, [client, uctCoinId]);
 
   const deposit = useCallback(
@@ -47,7 +56,7 @@ export function useWager(client: ConnectClient | null): UseWager {
       if (!client) return false;
 
       try {
-        const coinId = await resolveUctCoinId();
+        const { coinId } = await resolveUctAsset();
         console.log('[useWager] deposit: sending', { to: ESCROW_NAMETAG, amount: ENTRY_FEE, coinId, memo: `unichess:${gameId}` });
         const result = await client.intent(INTENT_ACTIONS.SEND, {
           to: ESCROW_NAMETAG,
@@ -62,29 +71,27 @@ export function useWager(client: ConnectClient | null): UseWager {
         return false;
       }
     },
-    [client, resolveUctCoinId],
+    [client, resolveUctAsset],
   );
 
   // testnet2 has no faucet. Rewards (20 UCT to a winner) and refunds (10 UCT on
   // draw/abort/decline) are self-minted into the *connected* wallet via a MINT
   // intent — the wallet prompts the user to approve, then mints test UCT to
-  // itself. `nametag` is the current user's own tag (each client pays only
-  // itself); it's carried in the memo for traceability, not used for routing.
+  // itself. Each client only ever pays itself, so the mint always targets the
+  // connected wallet (no recipient param). Per the Connect contract the MINT
+  // intent takes { coinId (lowercase hex), amount (smallest units, as string) }.
   const requestPayout = useCallback(
-    async (nametag: string, amount: number): Promise<boolean> => {
+    async (amount: number): Promise<boolean> => {
       if (!client) return false;
       if (amount <= 0) return false;
 
-      const unicityId = nametag.replace(/^@/, '');
-      if (!unicityId) return false;
-
       try {
-        const coinId = await resolveUctCoinId();
-        console.log('[useWager] payout: minting reward', { amount, coinId, for: unicityId });
+        const { coinId, decimals } = await resolveUctAsset();
+        const baseAmount = toBaseUnits(amount, decimals);
+        console.log('[useWager] payout: minting reward', { amount, baseAmount, coinId });
         const result = await client.intent(INTENT_ACTIONS.MINT, {
-          amount,
           coinId,
-          memo: `unichess-reward:${unicityId}`,
+          amount: baseAmount,
         });
         console.log('[useWager] payout: success', result);
         return true;
@@ -93,7 +100,7 @@ export function useWager(client: ConnectClient | null): UseWager {
         return false;
       }
     },
-    [client, resolveUctCoinId],
+    [client, resolveUctAsset],
   );
 
   const getBalance = useCallback(async (): Promise<number> => {
