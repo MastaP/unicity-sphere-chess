@@ -283,7 +283,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
           (result.outcome === 'black-wins' && myColor === 'black');
         if (iWon) {
           // When the opponent is a chess bot, the bot pays the reward directly
-          // from its own wallet via a Sphere transfer — skip the faucet.
+          // from its own wallet via a Sphere transfer — skip the self-mint.
           const botElo = g?.state.botElo ?? null;
           if (botElo == null) {
             wager.requestPayout(myNametag, 20);

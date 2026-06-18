@@ -6,9 +6,6 @@ export const COIN_SYMBOL = 'UCT';
 export const UCT_COIN_ID_FALLBACK =
   'f581d30f593e4b369d684a4563b5246f07b1d265f7178a2c0a82b81f39c24dc0';
 
-export const FAUCET_URL =
-  'https://faucet.unicity.network/api/v1/faucet/request';
-
 export const WALLET_URL = 'https://sphere.unicity.network';
 
 export const TIME_CONTROLS = [3, 5, 10] as const;
