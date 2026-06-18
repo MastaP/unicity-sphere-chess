@@ -225,7 +225,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
         }
         if (g.state.gameId && msg.gameId === g.state.gameId) {
           if (connection.identity?.nametag) {
-            wager.requestPayout(connection.identity.nametag, 10);
+            wager.requestPayout(10);
           }
           const opponentLabel = g.state.opponent?.nametag ?? 'opponent';
           setNotice(
@@ -276,7 +276,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
       // The opponent's client handles their own payout.
       if (result.outcome === 'aborted' || result.outcome === 'draw') {
         // Refund own deposit
-        wager.requestPayout(myNametag, 10);
+        wager.requestPayout(10);
       } else {
         const iWon =
           (result.outcome === 'white-wins' && myColor === 'white') ||
@@ -286,7 +286,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
           // from its own wallet via a Sphere transfer — skip the self-mint.
           const botElo = g?.state.botElo ?? null;
           if (botElo == null) {
-            wager.requestPayout(myNametag, 20);
+            wager.requestPayout(20);
           }
         }
         // Loser gets nothing — no payout needed

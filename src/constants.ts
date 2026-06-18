@@ -5,6 +5,10 @@ export const COIN_SYMBOL = 'UCT';
 // value normally comes from the wallet via sphere_getBalance.
 export const UCT_COIN_ID_FALLBACK =
   'f581d30f593e4b369d684a4563b5246f07b1d265f7178a2c0a82b81f39c24dc0';
+// Decimals for UCT. Used to convert whole-UCT amounts to the base units the
+// MINT intent expects. Fallback only — the live value comes from the wallet
+// via sphere_getBalance.
+export const UCT_DECIMALS = 18;
 
 export const WALLET_URL = 'https://sphere.unicity.network';
 
