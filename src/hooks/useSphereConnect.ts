@@ -3,6 +3,7 @@ import {
   ConnectClient,
   HOST_READY_TYPE,
   HOST_READY_TIMEOUT,
+  SPHERE_NETWORKS,
 } from '@unicitylabs/sphere-sdk/connect';
 import {
   PostMessageTransport,
@@ -32,6 +33,14 @@ const DAPP_META = {
   description: 'P2P chess on Unicity Sphere',
   url: typeof window !== 'undefined' ? window.location.origin : '',
 } as const;
+
+/**
+ * The network this dApp targets. Sent in the Connect handshake; the wallet
+ * rejects a mismatch with INCOMPATIBLE_NETWORK ("dApp targets a different
+ * network than the wallet"). testnet2 is currently the only network exposed
+ * by SPHERE_NETWORKS.
+ */
+const DAPP_NETWORK = SPHERE_NETWORKS.testnet2;
 
 function waitForHostReady(): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -108,6 +117,7 @@ export function useSphereConnect(): UseSphereConnect {
         transport,
         dapp: DAPP_META,
         permissions: PERMISSIONS,
+        network: DAPP_NETWORK,
         ...(silent ? { silent: true } : {}),
       });
       clientRef.current = client;
@@ -130,6 +140,7 @@ export function useSphereConnect(): UseSphereConnect {
       transport,
       dapp: DAPP_META,
       permissions: PERMISSIONS,
+      network: DAPP_NETWORK,
       ...(silent ? { silent: true } : {}),
     });
     clientRef.current = client;
@@ -169,6 +180,7 @@ export function useSphereConnect(): UseSphereConnect {
       transport,
       dapp: DAPP_META,
       permissions: PERMISSIONS,
+      network: DAPP_NETWORK,
       resumeSessionId,
     });
     clientRef.current = client;
