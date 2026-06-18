@@ -56,11 +56,13 @@ export function useWager(client: ConnectClient | null): UseWager {
       if (!client) return false;
 
       try {
-        const { coinId } = await resolveUctAsset();
-        console.log('[useWager] deposit: sending', { to: ESCROW_NAMETAG, amount: ENTRY_FEE, coinId, memo: `unichess:${gameId}` });
+        const { coinId, decimals } = await resolveUctAsset();
+        // The SEND intent takes the amount in smallest units, as a string.
+        const baseAmount = toBaseUnits(ENTRY_FEE, decimals);
+        console.log('[useWager] deposit: sending', { to: ESCROW_NAMETAG, amount: ENTRY_FEE, baseAmount, coinId, memo: `unichess:${gameId}` });
         const result = await client.intent(INTENT_ACTIONS.SEND, {
           to: ESCROW_NAMETAG,
-          amount: ENTRY_FEE,
+          amount: baseAmount,
           coinId,
           memo: `unichess:${gameId}`,
         });
