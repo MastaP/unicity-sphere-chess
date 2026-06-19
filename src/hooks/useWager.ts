@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import type { ConnectClient } from '@unicitylabs/sphere-sdk/connect';
 import { INTENT_ACTIONS } from '@unicitylabs/sphere-sdk/connect';
 import {
@@ -6,6 +6,7 @@ import {
   ENTRY_FEE,
   COIN_SYMBOL,
   UCT_COIN_ID_FALLBACK,
+  UCT_DECIMALS,
 } from '../constants';
 
 export interface UseWager {
@@ -15,12 +16,23 @@ export interface UseWager {
   uctCoinId: string | null;
 }
 
+/**
+ * Whole-token amount → base-unit string. The SEND and MINT intents both take
+ * the amount in the token's smallest indivisible unit, as a string (see
+ * docs/CONNECT.md; equivalent to the SDK's parseTokenAmount). Our amounts are
+ * whole integers (10 / 20 UCT), so plain BigInt math is exact.
+ */
+function toBaseUnits(whole: number, decimals: number): string {
+  return (BigInt(Math.round(whole)) * 10n ** BigInt(decimals)).toString();
+}
+
 export function useWager(client: ConnectClient | null): UseWager {
   const [uctCoinId, setUctCoinId] = useState<string | null>(null);
+  const uctDecimalsRef = useRef<number>(UCT_DECIMALS);
 
-  const resolveUctCoinId = useCallback(async (): Promise<string> => {
-    if (uctCoinId) return uctCoinId;
-    if (!client) return UCT_COIN_ID_FALLBACK;
+  const resolveUctAsset = useCallback(async (): Promise<{ coinId: string; decimals: number }> => {
+    if (uctCoinId) return { coinId: uctCoinId, decimals: uctDecimalsRef.current };
+    if (!client) return { coinId: UCT_COIN_ID_FALLBACK, decimals: UCT_DECIMALS };
 
     try {
       const assets = await client.query<
@@ -30,8 +42,12 @@ export function useWager(client: ConnectClient | null): UseWager {
       if (Array.isArray(assets)) {
         const uct = assets.find((a) => a.symbol === COIN_SYMBOL);
         if (uct?.coinId) {
+          // Use the wallet's own decimals so our base-unit math matches how it
+          // formats the amount in the confirm dialog.
+          const decimals = uct.decimals || UCT_DECIMALS;
           setUctCoinId(uct.coinId);
-          return uct.coinId;
+          uctDecimalsRef.current = decimals;
+          return { coinId: uct.coinId, decimals };
         }
       }
     } catch {
@@ -39,7 +55,7 @@ export function useWager(client: ConnectClient | null): UseWager {
     }
 
     setUctCoinId(UCT_COIN_ID_FALLBACK);
-    return UCT_COIN_ID_FALLBACK;
+    return { coinId: UCT_COIN_ID_FALLBACK, decimals: UCT_DECIMALS };
   }, [client, uctCoinId]);
 
   const deposit = useCallback(
@@ -47,11 +63,12 @@ export function useWager(client: ConnectClient | null): UseWager {
       if (!client) return false;
 
       try {
-        const coinId = await resolveUctCoinId();
-        console.log('[useWager] deposit: sending', { to: ESCROW_NAMETAG, amount: ENTRY_FEE, coinId, memo: `unichess:${gameId}` });
+        const { coinId, decimals } = await resolveUctAsset();
+        const amount = toBaseUnits(ENTRY_FEE, decimals);
+        console.log('[useWager] deposit: sending', { to: ESCROW_NAMETAG, entryFee: ENTRY_FEE, amount, coinId, memo: `unichess:${gameId}` });
         const result = await client.intent(INTENT_ACTIONS.SEND, {
           to: ESCROW_NAMETAG,
-          amount: ENTRY_FEE,
+          amount,
           coinId,
           memo: `unichess:${gameId}`,
         });
@@ -62,23 +79,24 @@ export function useWager(client: ConnectClient | null): UseWager {
         return false;
       }
     },
-    [client, resolveUctCoinId],
+    [client, resolveUctAsset],
   );
 
   // testnet2 has no faucet. Rewards (20 UCT to a winner) and refunds (10 UCT on
   // draw/abort/decline) are self-minted into the *connected* wallet via a MINT
   // intent — the wallet prompts the user to approve, then mints test UCT to
   // itself. Each client only ever pays itself, so the mint always targets the
-  // connected wallet (no recipient param). The `amount` is the whole-UCT value;
-  // the wallet renders/handles the decimals (same convention as the SEND intent).
+  // connected wallet (no recipient param). Per the Connect contract the MINT
+  // intent takes { coinId (lowercase hex), amount (base units, as a string) }.
   const requestPayout = useCallback(
-    async (amount: number): Promise<boolean> => {
+    async (whole: number): Promise<boolean> => {
       if (!client) return false;
-      if (amount <= 0) return false;
+      if (whole <= 0) return false;
 
       try {
-        const coinId = await resolveUctCoinId();
-        console.log('[useWager] payout: minting reward', { amount, coinId });
+        const { coinId, decimals } = await resolveUctAsset();
+        const amount = toBaseUnits(whole, decimals);
+        console.log('[useWager] payout: minting reward', { whole, amount, coinId });
         const result = await client.intent(INTENT_ACTIONS.MINT, {
           coinId,
           amount,
@@ -90,7 +108,7 @@ export function useWager(client: ConnectClient | null): UseWager {
         return false;
       }
     },
-    [client, resolveUctCoinId],
+    [client, resolveUctAsset],
   );
 
   const getBalance = useCallback(async (): Promise<number> => {
