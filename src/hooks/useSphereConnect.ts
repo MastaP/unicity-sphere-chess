@@ -4,6 +4,7 @@ import {
   HOST_READY_TYPE,
   HOST_READY_TIMEOUT,
   SPHERE_NETWORKS,
+  ERROR_CODES,
 } from '@unicitylabs/sphere-sdk/connect';
 import {
   PostMessageTransport,
@@ -44,6 +45,17 @@ const DAPP_META = {
  * by SPHERE_NETWORKS.
  */
 const DAPP_NETWORK = SPHERE_NETWORKS.testnet2;
+
+function connectErrorMessage(err: unknown): string {
+  const code = (err as { code?: number } | null)?.code;
+  if (code === ERROR_CODES.INCOMPATIBLE_NETWORK) {
+    return `Wrong network — switch your Sphere wallet to ${DAPP_NETWORK.name}.`;
+  }
+  if (code === ERROR_CODES.UNSUPPORTED_PROTOCOL_VERSION) {
+    return 'Your Sphere wallet and this app use incompatible versions — update the wallet (or this app).';
+  }
+  return err instanceof Error ? err.message : 'Connection failed';
+}
 
 function waitForHostReady(): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -209,7 +221,7 @@ export function useSphereConnect(): UseSphereConnect {
         await connectPopup();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Connection failed');
+      setError(connectErrorMessage(err));
     } finally {
       setIsConnecting(false);
     }
