@@ -47,12 +47,26 @@ const DAPP_META = {
 const DAPP_NETWORK = SPHERE_NETWORKS.testnet2;
 
 function connectErrorMessage(err: unknown): string {
-  const code = (err as { code?: number } | null)?.code;
+  const e = err as { code?: number; data?: Record<string, unknown> } | null;
+  const code = e?.code;
   if (code === ERROR_CODES.INCOMPATIBLE_NETWORK) {
     return `Wrong network — switch your Sphere wallet to ${DAPP_NETWORK.name}.`;
   }
   if (code === ERROR_CODES.UNSUPPORTED_PROTOCOL_VERSION) {
-    return 'Your Sphere wallet and this app use incompatible versions — update the wallet (or this app).';
+    // The wallet's compatibility gate refused us. When it's the SDK-version floor,
+    // the error data names the required minimum + our actual version — surface both,
+    // directionally (this app is the outdated side).
+    const data = e?.data ?? {};
+    const actual = typeof data.actualSdk === 'string' ? data.actualSdk : null;
+    // requiredSdk is a semver floor (e.g. "0.12.0-0"); show its release core.
+    const required =
+      typeof data.requiredSdk === 'string' ? data.requiredSdk.split('-')[0] : null;
+    if (required) {
+      return actual
+        ? `This app uses an outdated Sphere SDK (${actual}). Your wallet requires ${required} or newer — update this app's @unicitylabs/sphere-sdk.`
+        : `This app uses an outdated Sphere SDK. Your wallet requires ${required} or newer — update this app's @unicitylabs/sphere-sdk.`;
+    }
+    return "This app's Sphere SDK is incompatible with your wallet — update this app's @unicitylabs/sphere-sdk to the latest.";
   }
   return err instanceof Error ? err.message : 'Connection failed';
 }
