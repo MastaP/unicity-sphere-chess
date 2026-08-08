@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@unicitylabs/sphere-sdk": "0.12.0",
+    "@unicitylabs/sphere-sdk": "0.14.2",
     "chess.js": "^1.0.0",
     "react": "^19.0.0",
     "react-chessboard": "^4.7.2",
