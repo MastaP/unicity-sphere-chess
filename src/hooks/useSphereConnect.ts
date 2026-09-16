@@ -29,6 +29,10 @@ const PERMISSIONS: PermissionScope[] = [
   // testnet2 has no faucet — rewards/refunds are self-minted into the user's
   // own wallet via a MINT intent, so request mint permission up front.
   'mint:request',
+  // Each player mints an NFT of every finished game into their own wallet
+  // (mint_nft, Connect 2.3). A wallet that approved this app before keeps its
+  // earlier grant until the user disconnects and connects again.
+  'nft:mint',
   'events:subscribe',
 ];
 

@@ -100,3 +100,20 @@ export function isGameTerminal(chess: Chess): GameResult | null {
 
   return null;
 }
+
+const RESULT_REASON_LABELS: Record<GameResult['reason'], string> = {
+  checkmate: 'Checkmate',
+  resign: 'Resignation',
+  timeout: 'Time out',
+  stalemate: 'Stalemate',
+  agreement: 'By agreement',
+  repetition: 'Threefold repetition',
+  '50move': '50-move rule',
+  material: 'Insufficient material',
+  abort: 'Aborted',
+  disconnect: 'Disconnection',
+};
+
+export function resultReasonLabel(reason: GameResult['reason']): string {
+  return RESULT_REASON_LABELS[reason] ?? reason;
+}

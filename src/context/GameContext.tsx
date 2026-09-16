@@ -9,7 +9,11 @@ import { ACTION } from '../types/protocol.js';
 import type { ParsedMessage, ChallengeColor, GameOverReason } from '../types/protocol.js';
 import type { GameState, GameResult, PlayerColor, IncomingChallenge } from '../types/game.js';
 import type { ConnectClient } from '@unicitylabs/sphere-sdk/connect';
-import { GAME_ID_LENGTH } from '../constants.js';
+import { GAME_ID_LENGTH, appUrl } from '../constants.js';
+import { renderGameImage } from '../lib/nft/boardImage.js';
+import { finishedGameFrom } from '../lib/nft/fromGameState.js';
+import { qualifiesForNft, type FinishedGame } from '../lib/nft/gameRecord.js';
+import { canRetryNftMint, mintGameNft, type NftMintState } from '../lib/nft/mintGameNft.js';
 
 export interface GameContextValue {
   state: GameState;
@@ -33,6 +37,12 @@ export interface GameContextValue {
   reset: () => void;
   notice: string | null;
   clearNotice: () => void;
+  /** The current game's record once it has ended; null before that. */
+  finishedGame: FinishedGame | null;
+  /** The current game's NFT mint; null when none was attempted. */
+  nftMint: NftMintState | null;
+  /** Ask the wallet again after a mint that is safe to retry. */
+  retryNftMint: () => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -55,6 +65,8 @@ interface GameProviderProps {
 
 // Module-level dedup set — survives React StrictMode remounts
 const paidOutGameIds = new Set<string>();
+// Same for the automatic game NFT mint: one per game, however often the provider remounts.
+const nftRequestedGameIds = new Set<string>();
 
 export function GameProvider({ connection, children }: GameProviderProps) {
   const [incomingChallenge, setIncomingChallenge] = useState<IncomingChallenge | null>(() => {
@@ -92,6 +104,46 @@ export function GameProvider({ connection, children }: GameProviderProps) {
   });
 
   const wager = useWager(connection.client);
+
+  // Callbacks with stable identities read the connection through this ref, so
+  // a mint started later still uses the current client.
+  const connectionRef = useRef(connection);
+  connectionRef.current = connection;
+
+  const [finishedGame, setFinishedGame] = useState<FinishedGame | null>(null);
+  const [nftMints, setNftMints] = useState<Record<string, NftMintState>>({});
+  const nftInFlightRef = useRef(new Set<string>());
+
+  /**
+   * Mint `game`'s NFT into the connected wallet, drawn from `orientation`'s side.
+   * `after` is the payout prompt: the NFT prompt waits for it to be answered.
+   */
+  const startNftMint = useCallback(
+    (game: FinishedGame, orientation: PlayerColor, after?: Promise<unknown>) => {
+      const { gameId } = game;
+      if (nftInFlightRef.current.has(gameId)) return;
+      const setState = (state: NftMintState) => setNftMints((all) => ({ ...all, [gameId]: state }));
+      const client = connectionRef.current.client;
+      if (!client) {
+        setState({ status: 'failed', failure: { kind: 'failed', tokenId: null, reason: 'Not connected to a wallet' } });
+        return;
+      }
+      nftInFlightRef.current.add(gameId);
+      void mintGameNft({
+        client,
+        game,
+        site: appUrl(),
+        renderImage: () => renderGameImage(game, orientation),
+        after,
+        onState: setState,
+      })
+        .then((final) => {
+          if (final.status === 'failed') console.warn('[GameContext] game NFT not minted', gameId, final.failure);
+        })
+        .finally(() => nftInFlightRef.current.delete(gameId));
+    },
+    [],
+  );
 
   const [notice, setNotice] = useState<string | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
@@ -261,8 +313,9 @@ export function GameProvider({ connection, children }: GameProviderProps) {
   );
   messagingRef.current = messaging;
 
+  /** Requests this client's own payout; resolves once the wallet prompt is answered. */
   const triggerPayout = useCallback(
-    (result: GameResult, myColor: PlayerColor) => {
+    (result: GameResult, myColor: PlayerColor): Promise<boolean> | undefined => {
       const myNametag = connection.identity?.nametag;
       if (!myNametag) return;
 
@@ -276,7 +329,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
       // The opponent's client handles their own payout.
       if (result.outcome === 'aborted' || result.outcome === 'draw') {
         // Refund own deposit
-        wager.requestPayout(10);
+        return wager.requestPayout(10);
       } else {
         const iWon =
           (result.outcome === 'white-wins' && myColor === 'white') ||
@@ -286,7 +339,7 @@ export function GameProvider({ connection, children }: GameProviderProps) {
           // from its own wallet via a Sphere transfer — skip the self-mint.
           const botElo = g?.state.botElo ?? null;
           if (botElo == null) {
-            wager.requestPayout(20);
+            return wager.requestPayout(20);
           }
         }
         // Loser gets nothing — no payout needed
@@ -296,20 +349,41 @@ export function GameProvider({ connection, children }: GameProviderProps) {
     [],
   );
 
-  // Trigger payout when game transitions to 'ended' (covers timeout, incoming resign/gameover, etc.)
+  // Trigger payout when game transitions to 'ended' (covers timeout, incoming resign/gameover, etc.),
+  // then mint the game's NFT once that payout prompt has been answered.
   const prevStatusRef = useRef(game.state.status);
   useEffect(() => {
     if (prevStatusRef.current !== 'ended' && game.state.status === 'ended' && game.state.result) {
-      triggerPayout(game.state.result, game.state.myColor);
+      const payout = triggerPayout(game.state.result, game.state.myColor);
+      const finished = finishedGameFrom(game.state, connectionRef.current.identity, new Date());
+      if (finished) {
+        setFinishedGame(finished);
+        if (qualifiesForNft(finished) && !nftRequestedGameIds.has(finished.gameId)) {
+          nftRequestedGameIds.add(finished.gameId);
+          startNftMint(finished, game.state.myColor, payout);
+        }
+      }
     }
     prevStatusRef.current = game.state.status;
-  }, [game.state.status, game.state.result, game.state.myColor, triggerPayout]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game.state.status, game.state.result, game.state.myColor, triggerPayout, startNftMint]);
+
+  const currentFinishedGame = finishedGame?.gameId === game.state.gameId ? finishedGame : null;
+  const currentNftMint = game.state.gameId ? nftMints[game.state.gameId] ?? null : null;
 
   const value: GameContextValue = {
     state: game.state,
     incomingChallenge,
     notice,
     clearNotice,
+    finishedGame: currentFinishedGame,
+    nftMint: currentNftMint,
+
+    retryNftMint() {
+      if (!currentFinishedGame || currentNftMint?.status !== 'failed') return;
+      if (!canRetryNftMint(currentNftMint.failure.kind)) return;
+      startNftMint(currentFinishedGame, game.state.myColor);
+    },
 
     makeMove(from: string, to: string, promotion?: string) {
       // Convert from/to into SAN using chess.js

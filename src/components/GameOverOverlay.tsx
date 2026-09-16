@@ -2,6 +2,10 @@ import { useState } from 'react';
 import type { GameResult, PlayerColor, IncomingChallenge } from '../types/game.js';
 import { ENTRY_FEE } from '../constants.js';
 import { rewardForElo } from '../lib/bot-opponents.js';
+import { resultReasonLabel } from '../lib/chess-helpers.js';
+import type { FinishedGame } from '../lib/nft/gameRecord.js';
+import type { NftMintState } from '../lib/nft/mintGameNft.js';
+import { NftMintStatus } from './NftMintStatus.js';
 
 interface GameOverOverlayProps {
   result: GameResult;
@@ -14,6 +18,9 @@ interface GameOverOverlayProps {
   incomingChallenge?: IncomingChallenge | null;
   onAcceptChallenge?: () => void;
   onDeclineChallenge?: () => void;
+  finishedGame: FinishedGame | null;
+  nftMint: NftMintState | null;
+  onRetryNftMint: () => void;
 }
 
 function getPayoutText(result: GameResult, myColor: PlayerColor, botElo: number | null): string {
@@ -40,22 +47,6 @@ function getResultText(result: GameResult, myColor: PlayerColor): string {
   return iWon ? 'You Won!' : 'You Lost';
 }
 
-function getReasonText(result: GameResult): string {
-  const reasons: Record<string, string> = {
-    checkmate: 'Checkmate',
-    resign: 'Resignation',
-    timeout: 'Time out',
-    stalemate: 'Stalemate',
-    agreement: 'By agreement',
-    repetition: 'Threefold repetition',
-    '50move': '50-move rule',
-    material: 'Insufficient material',
-    abort: 'Aborted',
-    disconnect: 'Disconnection',
-  };
-  return reasons[result.reason] ?? result.reason;
-}
-
 export function GameOverOverlay({
   result,
   myColor,
@@ -66,6 +57,9 @@ export function GameOverOverlay({
   incomingChallenge,
   onAcceptChallenge,
   onDeclineChallenge,
+  finishedGame,
+  nftMint,
+  onRetryNftMint,
 }: GameOverOverlayProps) {
   const [copied, setCopied] = useState(false);
 
@@ -104,7 +98,7 @@ export function GameOverOverlay({
       </h2>
 
       <p className="text-neutral-400 text-sm mb-2">
-        {getReasonText(result)}
+        {resultReasonLabel(result.reason)}
       </p>
 
       {/* Payout */}
@@ -115,6 +109,8 @@ export function GameOverOverlay({
       >
         {getPayoutText(result, myColor, botElo)}
       </p>
+
+      <NftMintStatus finishedGame={finishedGame} nftMint={nftMint} onRetry={onRetryNftMint} />
 
       {/* Incoming rematch offer */}
       {incomingChallenge && onAcceptChallenge && onDeclineChallenge && (

@@ -20,6 +20,7 @@ Unicity Chess is a real-time chess game that runs as an iframe agent inside Unic
 
 - **P2P via DMs** — challenges, moves, and game events are exchanged through Sphere's Nostr-based direct messages
 - **UCT wagers** — 10 UCT entry fee per player, paid out automatically on game end
+- **Game NFTs** — every finished game of at least 5 moves is minted as an NFT into each human player's own wallet: an image of the final position from that player's side, with the full PGN and the result as attributes
 - **Time controls** — 3, 5, or 10 minute games
 - **Deep link challenges** — `unicity-connect://` URLs sent in DMs let opponents accept with one click
 - **Sphere integration** — connects via Sphere SDK (`ConnectClient`), blends with Sphere's design system
@@ -32,6 +33,21 @@ Unicity Chess is a real-time chess game that runs as an iframe agent inside Unic
 3. Player B opens the link in Sphere, deposits 10 UCT, and the game begins
 4. Moves are exchanged as DM messages using the `uc1:` protocol
 5. On game end (checkmate, resign, timeout, draw, abort), the winner receives 20 UCT; draws refund 10 UCT each
+6. Once that prompt is answered, each player's wallet asks to mint the game's NFT (not for aborted games or games under 5 moves)
+
+## Game NFTs
+
+Each client asks its own wallet to mint the NFT with the `mint_nft` Connect intent (Sphere Connect 2.3, `nft:mint` scope). The wallet mints into its own address, signs as the creator, and always asks the player to confirm, so nobody can mint into someone else's wallet. In a game against a bot only the human's client runs this app, so only the human gets one.
+
+| Field | Content |
+|-------|---------|
+| Name | `@white vs @black · 1-0` |
+| Description | Who won, how, and in how many moves |
+| Image | PNG of the final position from the minting player's side, last move highlighted |
+| Attributes | White, Black, Result, Termination, Moves, Time control, Date, Bot ELO (bot games), Game ID, Final position (FEN), PGN |
+| Collection | `Unicity Chess` |
+
+A wallet that approved Unicity Chess before `nft:mint` was requested keeps its earlier permissions; the player disconnects and connects again to allow minting. A wallet older than Connect 2.3 can still play, and is told it can't mint NFTs yet.
 
 ## Development
 
@@ -44,6 +60,7 @@ Unicity Chess is a real-time chess game that runs as an iframe agent inside Unic
 ```bash
 npm install
 npm run dev       # http://localhost:5173/unicity-sphere-chess/
+npm test          # unit tests (vitest)
 ```
 
 ### Build
