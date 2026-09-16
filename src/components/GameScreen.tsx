@@ -9,6 +9,18 @@ import { CapturedPieces } from './CapturedPieces.js';
 import { GameStatus } from './GameStatus.js';
 import { GameOverOverlay } from './GameOverOverlay.js';
 import type { UseSphereConnect } from '../hooks/useSphereConnect.js';
+import { appUrl } from '../constants.js';
+import { buildPgn, type FinishedGame } from '../lib/nft/gameRecord.js';
+
+/** The ended game's full PGN. The live `chess` is rebuilt from FEN each move, so it has no history. */
+function gamePgn(finishedGame: FinishedGame | null, fallback: string): string {
+  if (!finishedGame) return fallback;
+  try {
+    return buildPgn(finishedGame, appUrl());
+  } catch {
+    return fallback;
+  }
+}
 
 interface GameScreenProps {
   connection: UseSphereConnect;
@@ -32,6 +44,9 @@ export function GameScreen({ connection }: GameScreenProps) {
     reset,
     notice,
     clearNotice,
+    finishedGame,
+    nftMint,
+    retryNftMint,
   } = useGame();
 
   const myNametag = connection.identity?.nametag ?? 'You';
@@ -196,10 +211,13 @@ export function GameScreen({ connection }: GameScreenProps) {
                 botElo={state.botElo}
                 onRematch={offerRematch}
                 onNewGame={reset}
-                pgn={state.chess.pgn()}
+                pgn={gamePgn(finishedGame, state.chess.pgn())}
                 incomingChallenge={incomingChallenge}
                 onAcceptChallenge={acceptChallenge}
                 onDeclineChallenge={declineChallenge}
+                finishedGame={finishedGame}
+                nftMint={nftMint}
+                onRetryNftMint={retryNftMint}
               />
             )}
           </div>

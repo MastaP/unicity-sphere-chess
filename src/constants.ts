@@ -20,3 +20,8 @@ export const CHALLENGE_TIMEOUT_MS = 300_000;
 export const GAME_ID_LENGTH = 8;
 
 export const CLOCK_UPDATE_FPS = 10;
+
+/** This app's public URL, e.g. https://mastap.github.io/unicity-sphere-chess/ — recorded in game NFTs. */
+export function appUrl(): string {
+  return new URL(import.meta.env.BASE_URL, window.location.origin).href;
+}
